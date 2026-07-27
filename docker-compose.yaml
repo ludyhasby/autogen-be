@@ -24,6 +24,52 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+  web:
+    image: ludyhasby/autogen-be-web:1.0.0
+    entrypoint: ["/app/web"]
+    container_name: autogen-be-web
+    restart: always
+    ports:
+      - "9004:9004"
+    environment:
+      TZ: Asia/Jakarta
+    env_file:
+      - .env.production
+    volumes:
+      - ./file:/app/file
+      - ./.env.production:/app/.env
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  worker:
+    image: ludyhasby/autogen-be-worker:1.0.0
+    entrypoint: ["/app/worker"]
+    container_name: autogen-be-worker
+    restart: always
+    environment:
+      TZ: Asia/Jakarta
+    env_file:
+      - .env.production
+    volumes:
+      - ./file:/app/file # Menggunakan path relatif agar portable
+      - ./.env.production:/app/.env
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 volumes:
   postgres_data:
 networks:
