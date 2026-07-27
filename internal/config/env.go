@@ -1,0 +1,78 @@
+package config
+
+import (
+	"os"
+	"time"
+
+	"github.com/spf13/viper"
+)
+
+type Env struct {
+	AppName  string
+	PreFork  bool
+	LogLevel string
+	WebPort  int
+	Location *time.Location
+
+	DBMigrate  bool
+	DBUser     string
+	DBPass     string
+	DBHost     string
+	DBPort     string
+	DBName     string
+	DBSslMode  string
+	DBIdleConn int
+	DBMaxConn  int
+	DBMaxLife  time.Duration
+
+	SecretKey string
+	AESSecret string
+	AESPepper string
+
+	RowMaxLimit           int
+	NumberBatch           int
+	DeletedDurationInHour int
+
+	OTelEndpoint string
+
+	NewsAPI      string
+	NewsCronExpr string
+}
+
+func NewEnv(viper *viper.Viper) *Env {
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	timezone := os.Getenv("TIMEZONE")
+	if l, err := time.LoadLocation(timezone); err == nil {
+		loc = l
+	}
+	return &Env{
+		AppName:  viper.GetString("APP_NAME"),
+		PreFork:  viper.GetBool("PRE_FORK"),
+		LogLevel: viper.GetString("LOG_LEVEL"),
+		WebPort:  viper.GetInt("WEB_PORT"),
+		Location: loc,
+
+		DBMigrate:  viper.GetBool("DB_MIGRATE"),
+		DBUser:     viper.GetString("DB_USER"),
+		DBPass:     viper.GetString("DB_PASS"),
+		DBHost:     viper.GetString("DB_HOST"),
+		DBPort:     viper.GetString("DB_PORT"),
+		DBName:     viper.GetString("DB_NAME"),
+		DBSslMode:  viper.GetString("DB_SSL_MODE"),
+		DBIdleConn: viper.GetInt("DB_IDLE_CONN"),
+		DBMaxConn:  viper.GetInt("DB_MAX_CONN"),
+		DBMaxLife:  viper.GetDuration("DB_MAX_LIFE"),
+
+		SecretKey: viper.GetString("SECRET_KEY"),
+		AESSecret: viper.GetString("AES_SECRET"),
+		AESPepper: viper.GetString("AES_PEPPER"),
+
+		RowMaxLimit:           viper.GetInt("ROW_MAX_LIMIT"),
+		NumberBatch:           viper.GetInt("NUMBER_BATCH"),
+		DeletedDurationInHour: viper.GetInt("DELETED_DURATION_IN_HOUR"),
+
+		OTelEndpoint: viper.GetString("OTEL_ENDPOINT"),
+		NewsAPI:      viper.GetString("NEWS_API"),
+		NewsCronExpr: viper.GetString("NEWS_CRON_EXPR"),
+	}
+}

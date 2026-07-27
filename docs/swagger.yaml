@@ -1,0 +1,1278 @@
+definitions:
+  logisfy_core_enum.CTXEnumExtension:
+    enum:
+    - csv
+    - xlsx
+    - xls
+    type: string
+    x-enum-varnames:
+    - CTXEnumExtensionCSV
+    - CTXEnumExtensionXLSX
+    - CTXEnumExtensionXLS
+  logisfy_core_enum.CTXEnumLocationType:
+    enum:
+    - CUSTOMER
+    - METERPOINT
+    - PRE CUSTOMER
+    type: string
+    x-enum-varnames:
+    - CTXEnumLocationTypeCustomer
+    - CTXEnumLocationTypeMeterPoint
+    - CTXEnumLocationTypePreCustomer
+  logisfy_core_enum.CTXEnumStageProcess:
+    enum:
+    - CONFIG_SETTING
+    - CONFIG_WEIGHT
+    - READY
+    - DONE
+    type: string
+    x-enum-varnames:
+    - CTXEnumStageProcessConfigSetting
+    - CTXEnumStageProcessWeightSetting
+    - CTXEnumStageProcessReady
+    - CTXEnumStageProcessDone
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.AuthUserResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateParamConfigAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.CreateParamConfigAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateWeightConfigAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.CreateWeightConfigAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteUserResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.DeleteUserResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRParamConfigResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.FindAMRParamConfigResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.FindAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRWeightConfigResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.FindAMRWeightConfigResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_GenerateReportAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.GenerateReportAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ListAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListNewsResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ListNewsResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListReportAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ListReportAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListUserResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ListUserResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_RegisterUserResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.RegisterUserResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_UploadAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.UploadAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserActivationResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.UserActivationResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserDeActivationResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.UserDeActivationResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_internal_model_request.AuthUserReq:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      remember_me:
+        type: boolean
+    required:
+    - email
+    - password
+    type: object
+  logisfy_internal_model_request.CreateParamConfigAMRReq:
+    properties:
+      cos_phi_kecil_i_max_tm:
+        type: number
+      cos_phi_kecil_i_max_tr:
+        type: number
+      cos_phi_kecil_i_tm:
+        type: number
+      cos_phi_kecil_i_tr:
+        type: number
+      i_loss_i_tm:
+        type: number
+      i_loss_i_tr:
+        type: number
+      i_loss_v_tm:
+        type: number
+      i_loss_v_tr:
+        type: number
+      i_low_v_low_tm:
+        type: number
+      i_low_v_low_tr:
+        type: number
+      i_unbalance_i_tm:
+        type: number
+      i_unbalance_i_tr:
+        type: number
+      i_unbalance_tol_tm:
+        type: number
+      i_unbalance_tol_tr:
+        type: number
+      in_greater_i_max_in_tm:
+        type: number
+      in_greater_i_max_in_tr:
+        type: number
+      min_indicator_amount:
+        type: number
+      min_weight:
+        type: number
+      n_show_recommendation:
+        maximum: 2500
+        minimum: 1
+        type: integer
+      over_current_i_max_tm:
+        type: number
+      over_current_i_max_tr:
+        type: number
+      over_voltage_v_max_tm:
+        type: number
+      over_voltage_v_max_tr:
+        type: number
+      p_loss_i:
+        type: number
+      reverse_power_i_tm:
+        type: number
+      reverse_power_i_tr:
+        type: number
+      reverse_power_v_tm:
+        type: number
+      reverse_power_v_tr:
+        type: number
+      v_drop_i_tm:
+        type: number
+      v_drop_i_tr:
+        type: number
+      v_drop_v_tm:
+        type: number
+      v_drop_v_tr:
+        type: number
+      v_loss_i_tm:
+        type: number
+      v_loss_i_tr:
+        type: number
+      v_loss_v_tm:
+        type: number
+      v_loss_v_tr:
+        type: number
+    type: object
+  logisfy_internal_model_request.CreateWeightConfigAMRReq:
+    properties:
+      active_p_loss:
+        type: number
+      cos_phi_kecil:
+        type: number
+      current_loop:
+        type: number
+      freeze:
+        type: number
+      i_loss:
+        type: number
+      i_low_v_low:
+        type: number
+      reverse_power:
+        type: number
+      unbalance_i:
+        type: number
+      v_direct_drop:
+        type: number
+      v_indirect_drop:
+        type: number
+      v_loss:
+        type: number
+    type: object
+  logisfy_internal_model_request.GenerateReportAMRReq:
+    type: object
+  logisfy_internal_model_request.RegisterUserReq:
+    properties:
+      UP3:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      unit_induk:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  logisfy_internal_model_response.AuthUserResp:
+    properties:
+      role:
+        type: string
+      token:
+        type: string
+    type: object
+  logisfy_internal_model_response.CreateParamConfigAMRResp:
+    properties:
+      amr_config_id:
+        type: integer
+    type: object
+  logisfy_internal_model_response.CreateWeightConfigAMRResp:
+    properties:
+      amr_weight_config_id:
+        type: integer
+    type: object
+  logisfy_internal_model_response.DeleteUserResp:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  logisfy_internal_model_response.FindAMRParamConfigResp:
+    properties:
+      amr_config_id:
+        type: integer
+      amr_id:
+        type: integer
+      cos_phi_kecil_i_tm:
+        type: number
+      cos_phi_kecil_i_tr:
+        type: number
+      cos_phi_kecil_upper_limit_tm:
+        type: number
+      cosPhiKecilUpperLimitTR:
+        type: number
+      created_at:
+        type: string
+      i_loss_i_max_tm:
+        type: number
+      i_loss_i_max_tr:
+        type: number
+      i_loss_i_tm:
+        type: number
+      i_loss_i_tr:
+        type: number
+      i_low_v_low_tm:
+        type: number
+      i_low_v_low_tr:
+        type: number
+      i_unbalance_i_tm:
+        type: number
+      i_unbalance_i_tr:
+        type: number
+      i_unbalance_tol_tm:
+        type: number
+      i_unbalance_tol_tr:
+        type: number
+      in_greater_i_max_in_tm:
+        type: number
+      in_greater_i_max_in_tr:
+        type: number
+      min_indicator_amount:
+        type: number
+      min_weight:
+        type: number
+      n_show_recommendation:
+        type: integer
+      over_current_i_max_tm:
+        type: number
+      over_current_i_max_tr:
+        type: number
+      over_voltage_v_max_tm:
+        type: number
+      over_voltage_v_max_tr:
+        type: number
+      p_loss_i:
+        type: number
+      reverse_power_i_tm:
+        type: number
+      reverse_power_i_tr:
+        type: number
+      reverse_power_v_tm:
+        type: number
+      reverse_power_v_tr:
+        type: number
+      v_drop_i_tm:
+        type: number
+      v_drop_i_tr:
+        type: number
+      v_drop_v_tm:
+        type: number
+      v_drop_v_tr:
+        type: number
+      v_loss_i_tm:
+        type: number
+      v_loss_i_tr:
+        type: number
+      v_loss_v_tm:
+        type: number
+      v_loss_v_tr:
+        type: number
+    type: object
+  logisfy_internal_model_response.FindAMRResp:
+    properties:
+      amr_id:
+        type: integer
+      auto_deleted_at:
+        type: string
+      created_at:
+        type: string
+      extension:
+        $ref: '#/definitions/logisfy_core_enum.CTXEnumExtension'
+      filename:
+        type: string
+      read_date:
+        type: string
+      row_numbers:
+        type: integer
+      stage_process:
+        $ref: '#/definitions/logisfy_core_enum.CTXEnumStageProcess'
+    type: object
+  logisfy_internal_model_response.FindAMRWeightConfigResp:
+    properties:
+      active_p_loss:
+        type: number
+      amr_id:
+        type: integer
+      amr_weight_config_id:
+        type: integer
+      cos_phi_kecil:
+        type: number
+      created_at:
+        type: string
+      current_loop:
+        type: number
+      freeze:
+        type: number
+      i_loss:
+        type: number
+      i_low_v_low:
+        type: number
+      in_greated_imax:
+        type: number
+      over_current:
+        type: number
+      over_voltage:
+        type: number
+      reverse_power:
+        type: number
+      unbalance_i:
+        type: number
+      v_direct_drop:
+        type: number
+      v_indirect_drop:
+        type: number
+      v_loss:
+        type: number
+    type: object
+  logisfy_internal_model_response.GenerateReportAMRResp:
+    properties:
+      amr_id:
+        type: integer
+    type: object
+  logisfy_internal_model_response.ListAMR:
+    properties:
+      amr_id:
+        type: integer
+      auto_deleted_at:
+        type: string
+      created_at:
+        type: string
+      extension:
+        $ref: '#/definitions/logisfy_core_enum.CTXEnumExtension'
+      filename:
+        type: string
+      read_date:
+        type: string
+      row_numbers:
+        type: integer
+      stage_process:
+        $ref: '#/definitions/logisfy_core_enum.CTXEnumStageProcess'
+    type: object
+  logisfy_internal_model_response.ListAMRResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/logisfy_internal_model_response.ListAMR'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  logisfy_internal_model_response.ListNews:
+    properties:
+      description:
+        type: string
+      published_at:
+        type: string
+      source:
+        type: string
+      title:
+        type: string
+      url:
+        type: string
+      url_to_image:
+        type: string
+    type: object
+  logisfy_internal_model_response.ListNewsResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/logisfy_internal_model_response.ListNews'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  logisfy_internal_model_response.ListReport:
+    properties:
+      active_p_loss:
+        type: boolean
+      amr_detail_id:
+        type: integer
+      cos_phi_kecil:
+        type: boolean
+      current_loop:
+        type: boolean
+      freeze:
+        type: boolean
+      i_loss:
+        type: boolean
+      i_low_v_low:
+        type: boolean
+      in_greater_i_max:
+        type: boolean
+      location_code:
+        type: string
+      location_type:
+        $ref: '#/definitions/logisfy_core_enum.CTXEnumLocationType'
+      over_i:
+        type: boolean
+      over_v:
+        type: boolean
+      reverse_power:
+        type: boolean
+      tariff:
+        type: string
+      total_weighted_value:
+        type: number
+      unbalance_i:
+        type: boolean
+      v_drop:
+        type: boolean
+      v_loss:
+        type: boolean
+    type: object
+  logisfy_internal_model_response.ListReportAMRResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/logisfy_internal_model_response.ListReport'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  logisfy_internal_model_response.ListUser:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      last_login:
+        type: string
+      name:
+        type: string
+      unit_induk:
+        type: string
+      up3:
+        type: string
+    type: object
+  logisfy_internal_model_response.ListUserResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/logisfy_internal_model_response.ListUser'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  logisfy_internal_model_response.RegisterUserResp:
+    properties:
+      id:
+        type: integer
+    type: object
+  logisfy_internal_model_response.UploadAMRResp:
+    properties:
+      amr_id:
+        type: integer
+      data_count:
+        type: integer
+    type: object
+  logisfy_internal_model_response.UserActivationResp:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  logisfy_internal_model_response.UserDeActivationResp:
+    properties:
+      user_id:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: This is Api for Autogen.
+  termsOfService: http://swagger.io/terms/
+  title: Autogen API
+  version: "1.0"
+paths:
+  /admin/auth:
+    get:
+      description: List User
+      parameters:
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      - description: Current Page
+        in: query
+        name: page
+        type: integer
+      - description: Page Size
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListUserResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListUserResp'
+      security:
+      - Bearer: []
+      summary: List User
+      tags:
+      - Auth
+  /admin/auth/:user_id:
+    delete:
+      description: Delete User
+      parameters:
+      - description: User ID
+        format: int64
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteUserResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteUserResp'
+      security:
+      - Bearer: []
+      summary: Delete User
+      tags:
+      - Auth
+  /admin/auth/:user_id/activation:
+    put:
+      description: User Activation
+      parameters:
+      - description: User ID
+        format: int64
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserActivationResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserActivationResp'
+      security:
+      - Bearer: []
+      summary: User Activation
+      tags:
+      - Auth
+  /admin/auth/:user_id/deactivation:
+    put:
+      description: User DeActivation
+      parameters:
+      - description: User ID
+        format: int64
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserDeActivationResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserDeActivationResp'
+      security:
+      - Bearer: []
+      summary: User DeActivation
+      tags:
+      - Auth
+  /public/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Auth Login
+      parameters:
+      - description: Auth Request Parameter
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/logisfy_internal_model_request.AuthUserReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp'
+      summary: Auth Login
+      tags:
+      - Auth
+  /public/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create User (Register) for User
+      parameters:
+      - description: Register User Request Parameter
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/logisfy_internal_model_request.RegisterUserReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_RegisterUserResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_RegisterUserResp'
+      security:
+      - Bearer: []
+      summary: Create User (Register)
+      tags:
+      - Auth
+  /public/news:
+    get:
+      description: List News
+      parameters:
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      - description: Current Page
+        in: query
+        name: page
+        type: integer
+      - description: Page Size
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListNewsResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListNewsResp'
+      summary: List News
+      tags:
+      - Auth
+  /user:
+    get:
+      description: Find an Account by Token
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp'
+      security:
+      - Bearer: []
+      summary: Find
+      tags:
+      - Auth
+  /user/amr:
+    get:
+      consumes:
+      - application/json
+      description: FindByAMRID All AMR
+      parameters:
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      - description: Current Page
+        in: query
+        name: page
+        type: integer
+      - description: Rows Count
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListAMRResp'
+      security:
+      - Bearer: []
+      summary: FindByAMRID All AMR
+      tags:
+      - AMR
+    post:
+      description: Upload AMR dataset
+      parameters:
+      - description: File Excel AMR (.xlsx/.xls/.csv)
+        in: formData
+        name: attachment
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UploadAMRResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UploadAMRResp'
+      security:
+      - Bearer: []
+      summary: Upload AMR dataset
+      tags:
+      - AMR
+  /user/amr/:amr_id:
+    get:
+      description: Find AMR
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRResp'
+      security:
+      - Bearer: []
+      summary: Find AMR
+      tags:
+      - AMR
+  /user/amr/:amr_id/generate-report:
+    post:
+      consumes:
+      - application/json
+      description: Create Generate Report AMR
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      - description: Generare Report of AMR Request Parameter
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/logisfy_internal_model_request.GenerateReportAMRReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_GenerateReportAMRResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_GenerateReportAMRResp'
+      summary: Generate Report AMR
+      tags:
+      - AMR
+  /user/amr/:amr_id/param-config:
+    get:
+      description: Find AMR Param Config by amr_id
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRParamConfigResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRParamConfigResp'
+      security:
+      - Bearer: []
+      summary: Find AMR Param Config
+      tags:
+      - AMR
+    post:
+      consumes:
+      - application/json
+      description: Create Param Config of AMR
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      - description: CreateParamConfig of AMR Request Parameter
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/logisfy_internal_model_request.CreateParamConfigAMRReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateParamConfigAMRResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateParamConfigAMRResp'
+      summary: Create Param Config
+      tags:
+      - AMR
+  /user/amr/:amr_id/report:
+    get:
+      consumes:
+      - application/json
+      description: Get Report AMR by AMR ID
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      - description: Current Page
+        in: query
+        name: page
+        type: integer
+      - description: Rows Count
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListReportAMRResp'
+      security:
+      - Bearer: []
+      summary: Get Report AMR
+      tags:
+      - AMR
+  /user/amr/:amr_id/weight-config:
+    get:
+      description: Find AMR Weight Config by amr_id
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRWeightConfigResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRWeightConfigResp'
+      security:
+      - Bearer: []
+      summary: Find AMR Weight Config
+      tags:
+      - AMR
+    post:
+      consumes:
+      - application/json
+      description: Create Weight Config of AMR
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      - description: CreateWeightConfig of AMR Request Parameter
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/logisfy_internal_model_request.CreateWeightConfigAMRReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateWeightConfigAMRResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateWeightConfigAMRResp'
+      summary: Create Weight Config
+      tags:
+      - AMR
+schemes:
+- https
+swagger: "2.0"

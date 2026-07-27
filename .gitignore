@@ -1,0 +1,5 @@
+.env
+*.log
+/log
+*.sql
+docker-compose-local.yaml

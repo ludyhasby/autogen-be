@@ -1,0 +1,379 @@
+package usecase
+
+import (
+	"context"
+	"log/slog"
+	coreenum "logisfy/core/enum"
+	helperexception "logisfy/helper/exception"
+	helperhash "logisfy/helper/hash"
+	"logisfy/internal/delivery/http/middleware"
+	"logisfy/internal/entity"
+	modelrequest "logisfy/internal/model/request"
+	modelresponse "logisfy/internal/model/response"
+	"logisfy/internal/repository"
+	"strconv"
+	"time"
+
+	"github.com/go-playground/validator/v10"
+	"go.opentelemetry.io/otel"
+	"gorm.io/gorm"
+)
+
+type AuthUseCase struct {
+	DB             *gorm.DB
+	Log            *slog.Logger
+	SecretKeyStr   string
+	Validate       *validator.Validate
+	UserRepository *repository.UserRepository
+}
+
+func NewAuthUseCase(
+	db *gorm.DB,
+	log *slog.Logger,
+	validate *validator.Validate,
+	secretKeyStr string,
+	userRepository *repository.UserRepository,
+) *AuthUseCase {
+	return &AuthUseCase{
+		DB:             db,
+		Log:            log,
+		SecretKeyStr:   secretKeyStr,
+		Validate:       validate,
+		UserRepository: userRepository,
+	}
+}
+
+func (u *AuthUseCase) Register(ctx context.Context, req *modelrequest.RegisterUserReq) (resp modelresponse.RegisterUserResp, exc *helperexception.Exception) {
+	// Init Tracer
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "Register()")
+	defer span.End()
+
+	var err error
+	// Validator
+	if err = u.Validate.Struct(req); err != nil {
+		u.Log.Info("AuthUseCase.Register()", "Validate.Struct()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	// Init DB
+	tx := u.DB.WithContext(ctx)
+	defer func() {
+		if exc != nil || err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Check existing email
+	existingUser, err := u.UserRepository.FindByEmail(tx, req.Email)
+	if err != nil {
+		u.Log.Error("AuthUseCase.Register()", "UserRepository.FindByEmail()", "error", err.Error())
+		exc = helperexception.Internal("error once find user by email", err)
+		return
+	}
+	if existingUser.CheckFound() {
+		exc = helperexception.Conflict("email has been used")
+		return
+	}
+
+	tx = tx.Begin()
+
+	// create user
+	entityUser := (entity.UserEntity{}).Create(req, coreenum.CTXEnumRoleUser)
+	// exec repo
+	err = u.UserRepository.Create(tx, entityUser)
+	if err != nil {
+		u.Log.Error("AuthUseCase.Register()", "UserRepository.Create()", "error", err.Error())
+		exc = helperexception.Internal("failed to create entity user", err)
+		return
+	}
+	// response
+	resp.UserID = entityUser.UserID
+
+	// commit
+	if err = tx.Commit().Error; err != nil {
+		u.Log.Error("AuthUseCase.Register()", "tx.Commit()", "error", err.Error())
+		exc = helperexception.Internal("failed to create entity user", err)
+		return
+	}
+	return
+}
+
+func (u *AuthUseCase) Login(ctx context.Context, req *modelrequest.AuthUserReq) (resp modelresponse.AuthUserResp, exc *helperexception.Exception) {
+	// Init Tracer
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "Login()")
+	defer span.End()
+
+	var err error
+	// Validator
+	if err = u.Validate.Struct(req); err != nil {
+		u.Log.Info("AuthUseCase.Login()", "Validate.Struct()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	// Init Transaction
+	tx := u.DB.WithContext(ctx)
+
+	// FindByAMRID User By Email
+	entityUser, err := u.UserRepository.FindByEmail(tx, req.Email)
+	if err != nil {
+		u.Log.Info("AuthUseCase.Login()", "UserRepository.FindByEmail()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses login", err)
+		return
+	}
+	// Check Email Found
+	if !entityUser.CheckFound() {
+		exc = helperexception.NotFound("email/password salah")
+		return
+	}
+
+	// Check Password
+	isTrue := helperhash.ComparePass(entityUser.Password, req.Password)
+	if !isTrue {
+		u.Log.Info("AuthUseCase.Login()", "CheckPassword()", "Err", err)
+		exc = helperexception.NotFound("email/password salah")
+		return
+	}
+
+	// validate status
+	if !entityUser.IsActive {
+		exc = helperexception.PermissionDenied("akun anda telah ditangguhkan, silakan hubungi admin untuk mengaktifkannya kembali.")
+		return
+	}
+
+	// Generate JWT Naked
+	jwtNaked := middleware.AuthJWT{
+		Email:  entityUser.Email,
+		Name:   entityUser.Name,
+		UserID: strconv.Itoa(int(entityUser.UserID)),
+		Role:   entityUser.Role.String(),
+	}
+
+	// Generate JWT
+	tokenString, err := middleware.GenerateJWT(jwtNaked, u.SecretKeyStr, req.RememberMe)
+	if err != nil {
+		u.Log.Info("AuthUseCase.LoginUser()", "middleware.GenerateJWT()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses login", err)
+		return
+	}
+
+	// Update Last Login
+	timeNow := time.Now()
+	entityUser.LastLoginAt = &timeNow
+	err = u.UserRepository.Update(tx, entityUser)
+	if err != nil {
+		u.Log.Info("AuthUseCase.LoginUser()", "UserRepository.Update()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses login", err)
+		return
+	}
+
+	// response
+	resp.Token = tokenString
+	resp.Role = entityUser.Role.String()
+	return
+}
+
+func (u *AuthUseCase) Activation(ctx context.Context, req *modelrequest.UserActivationReq) (resp modelresponse.UserActivationResp, exc *helperexception.Exception) {
+	// Init Tracer
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "Activation()")
+	defer span.End()
+
+	var err error
+	userID, err := strconv.Atoi(req.UserID)
+	if err != nil {
+		u.Log.Info("AuthUseCase.Activation()", "strconv.Atoi()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	// Init Transaction
+	tx := u.DB.WithContext(ctx)
+
+	// FindByAMRID User By User ID
+	entityUser, err := u.UserRepository.FindByUserID(tx, uint64(userID))
+	if err != nil {
+		u.Log.Info("AuthUseCase.Activation()", "UserRepository.FindByUserID()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses pencarian user", err)
+		return
+	}
+	if !entityUser.CheckFound() {
+		exc = helperexception.NotFound("user tidak ditemukan")
+		return
+	}
+	// validate status
+	if entityUser.IsActive {
+		exc = helperexception.PermissionDenied("akun telah aktif.")
+		return
+	}
+
+	entityUser.IsActive = true
+	err = u.UserRepository.Update(tx, entityUser)
+	if err != nil {
+		u.Log.Info("AuthUseCase.Activation()", "UserRepository.Update()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses aktivasi", err)
+		return
+	}
+
+	// response
+	resp.UserID = entityUser.UserID
+	return
+}
+
+func (u *AuthUseCase) List(ctx context.Context, req *modelrequest.ListUserReq) (resp modelresponse.ListUserResp, exc *helperexception.Exception) {
+	// init tracer
+	tr := otel.Tracer("useCase.AccountUseCase")
+	ctx, span := tr.Start(ctx, "List()")
+	defer span.End()
+
+	// Init DB
+	tx := u.DB.WithContext(ctx)
+
+	// exec repo
+	entityUserList, items, totalPages, size, err := u.UserRepository.List(tx, req.QueryInfo)
+	if err != nil {
+		u.Log.Info("AuthUseCase.List()", "UserRepository.List()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses list", err)
+		return
+	}
+
+	// resp
+	resp.List = (&entity.UserEntity{}).ConvertToList(entityUserList)
+	resp.TotalItems = items
+	resp.Page = req.QueryInfo.SelectParameter.PageDescriptor.PageIndex
+	resp.PageSize = size
+	resp.TotalPages = totalPages
+	return
+}
+
+func (u *AuthUseCase) DeActivation(ctx context.Context, req *modelrequest.UserDeActivationReq) (resp modelresponse.UserDeActivationResp, exc *helperexception.Exception) {
+	// Init Tracer
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "DeActivation()")
+	defer span.End()
+
+	var err error
+	userID, err := strconv.Atoi(req.UserID)
+	if err != nil {
+		u.Log.Info("AuthUseCase.DeActivation()", "strconv.Atoi()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	// Init Transaction
+	tx := u.DB.WithContext(ctx)
+
+	// FindByAMRID User By User ID
+	entityUser, err := u.UserRepository.FindByUserID(tx, uint64(userID))
+	if err != nil {
+		u.Log.Info("AuthUseCase.DeActivation()", "UserRepository.FindByUserID()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses pencarian user", err)
+		return
+	}
+	if !entityUser.CheckFound() {
+		exc = helperexception.NotFound("user tidak ditemukan")
+		return
+	}
+	// validate status
+	if !entityUser.IsActive {
+		exc = helperexception.PermissionDenied("akun telah non aktif.")
+		return
+	}
+
+	entityUser.IsActive = false
+	err = u.UserRepository.Update(tx, entityUser)
+	if err != nil {
+		u.Log.Info("AuthUseCase.DeActivation()", "UserRepository.Update()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses de aktivasi", err)
+		return
+	}
+
+	// response
+	resp.UserID = entityUser.UserID
+	return
+}
+
+func (u *AuthUseCase) Delete(ctx context.Context, req *modelrequest.DeleteUserReq) (resp modelresponse.DeleteUserResp, exc *helperexception.Exception) {
+	// Init Tracer
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "Delete()")
+	defer span.End()
+
+	var err error
+	userID, err := strconv.Atoi(req.UserID)
+	if err != nil {
+		u.Log.Info("AuthUseCase.Delete()", "strconv.Atoi()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	// Init Transaction
+	tx := u.DB.WithContext(ctx)
+
+	// FindByAMRID User By User ID
+	entityUser, err := u.UserRepository.FindByUserID(tx, uint64(userID))
+	if err != nil {
+		u.Log.Info("AuthUseCase.Delete()", "UserRepository.FindByUserID()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses pencarian user", err)
+		return
+	}
+	if !entityUser.CheckFound() {
+		exc = helperexception.NotFound("user tidak ditemukan")
+		return
+	}
+	// validate status
+	if entityUser.IsActive {
+		exc = helperexception.PermissionDenied("akun sedang aktif, lakukan deaktivasi terlebih dahulu.")
+		return
+	}
+
+	err = u.UserRepository.Delete(tx, entityUser)
+	if err != nil {
+		u.Log.Info("AuthUseCase.Delete()", "UserRepository.Delete()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses hapus user", err)
+		return
+	}
+
+	// response
+	resp.UserID = entityUser.UserID
+	return
+}
+
+func (u *AuthUseCase) Find(ctx context.Context) (resp modelresponse.FindUserResp, exc *helperexception.Exception) {
+	// Init Tracer
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "Find()")
+	defer span.End()
+
+	var err error
+	userID, err := strconv.Atoi(ctx.Value(string(coreenum.CTXEnumIDUserID)).(string))
+	if err != nil {
+		u.Log.Warn("AuthUseCase.Find()", "strconv.Atoi()", "warn", err.Error())
+		exc = helperexception.InvalidArgument(err, ctx.Value(string(coreenum.CTXEnumIDUserID)))
+		return
+	}
+
+	// Init Transaction
+	tx := u.DB.WithContext(ctx)
+
+	// FindByAMRID User By User ID
+	entityUser, err := u.UserRepository.FindByUserID(tx, uint64(userID))
+	if err != nil {
+		u.Log.Info("AuthUseCase.Find()", "UserRepository.FindByUserID()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses pencarian user", err)
+		return
+	}
+	if !entityUser.CheckFound() {
+		exc = helperexception.NotFound("user tidak ditemukan")
+		return
+	}
+	// response
+	resp.UserID = entityUser.UserID
+	resp.Name = entityUser.Name
+	resp.Email = entityUser.Email
+	resp.UP3 = entityUser.UP3
+	resp.UnitInduk = entityUser.UnitInduk
+	return
+}

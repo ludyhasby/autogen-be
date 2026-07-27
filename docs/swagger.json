@@ -1,0 +1,1956 @@
+{
+    "schemes": [
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "This is Api for Autogen.",
+        "title": "Autogen API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {},
+        "version": "1.0"
+    },
+    "paths": {
+        "/admin/auth": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "List User",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "List User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search Parameter",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting Parameter",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page Size",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListUserResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListUserResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/auth/:user_id": {
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete User",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Delete User",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteUserResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteUserResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/auth/:user_id/activation": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "User Activation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User Activation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserActivationResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserActivationResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/auth/:user_id/deactivation": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "User DeActivation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User DeActivation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserDeActivationResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserDeActivationResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/auth/login": {
+            "post": {
+                "description": "Auth Login",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Auth Login",
+                "parameters": [
+                    {
+                        "description": "Auth Request Parameter",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_internal_model_request.AuthUserReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/auth/register": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create User (Register) for User",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Create User (Register)",
+                "parameters": [
+                    {
+                        "description": "Register User Request Parameter",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_internal_model_request.RegisterUserReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_RegisterUserResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_RegisterUserResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/news": {
+            "get": {
+                "description": "List News",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "List News",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search Parameter",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting Parameter",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page Size",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListNewsResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListNewsResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Find an Account by Token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Find",
+                "responses": {
+                    "201": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/amr": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "FindByAMRID All AMR",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "FindByAMRID All AMR",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search Parameter",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting Parameter",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Rows Count",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListAMRResp"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Upload AMR dataset",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Upload AMR dataset",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "File Excel AMR (.xlsx/.xls/.csv)",
+                        "name": "attachment",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UploadAMRResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_UploadAMRResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/amr/:amr_id": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Find AMR",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Find AMR",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "AMR ID",
+                        "name": "amr_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/amr/:amr_id/generate-report": {
+            "post": {
+                "description": "Create Generate Report AMR",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Generate Report AMR",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "AMR ID",
+                        "name": "amr_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Generare Report of AMR Request Parameter",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_internal_model_request.GenerateReportAMRReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_GenerateReportAMRResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_GenerateReportAMRResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/amr/:amr_id/param-config": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Find AMR Param Config by amr_id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Find AMR Param Config",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "AMR ID",
+                        "name": "amr_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRParamConfigResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRParamConfigResp"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create Param Config of AMR",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Create Param Config",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "AMR ID",
+                        "name": "amr_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "CreateParamConfig of AMR Request Parameter",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_internal_model_request.CreateParamConfigAMRReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateParamConfigAMRResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateParamConfigAMRResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/amr/:amr_id/report": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get Report AMR by AMR ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Get Report AMR",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "AMR ID",
+                        "name": "amr_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search Parameter",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting Parameter",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Current Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Rows Count",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListReportAMRResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/amr/:amr_id/weight-config": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Find AMR Weight Config by amr_id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Find AMR Weight Config",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "AMR ID",
+                        "name": "amr_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRWeightConfigResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRWeightConfigResp"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create Weight Config of AMR",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Create Weight Config",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "AMR ID",
+                        "name": "amr_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "CreateWeightConfig of AMR Request Parameter",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_internal_model_request.CreateWeightConfigAMRReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateWeightConfigAMRResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Result",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateWeightConfigAMRResp"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "logisfy_core_enum.CTXEnumExtension": {
+            "type": "string",
+            "enum": [
+                "csv",
+                "xlsx",
+                "xls"
+            ],
+            "x-enum-varnames": [
+                "CTXEnumExtensionCSV",
+                "CTXEnumExtensionXLSX",
+                "CTXEnumExtensionXLS"
+            ]
+        },
+        "logisfy_core_enum.CTXEnumLocationType": {
+            "type": "string",
+            "enum": [
+                "CUSTOMER",
+                "METERPOINT",
+                "PRE CUSTOMER"
+            ],
+            "x-enum-varnames": [
+                "CTXEnumLocationTypeCustomer",
+                "CTXEnumLocationTypeMeterPoint",
+                "CTXEnumLocationTypePreCustomer"
+            ]
+        },
+        "logisfy_core_enum.CTXEnumStageProcess": {
+            "type": "string",
+            "enum": [
+                "CONFIG_SETTING",
+                "CONFIG_WEIGHT",
+                "READY",
+                "DONE"
+            ],
+            "x-enum-varnames": [
+                "CTXEnumStageProcessConfigSetting",
+                "CTXEnumStageProcessWeightSetting",
+                "CTXEnumStageProcessReady",
+                "CTXEnumStageProcessDone"
+            ]
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.AuthUserResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateParamConfigAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.CreateParamConfigAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateWeightConfigAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.CreateWeightConfigAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteUserResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.DeleteUserResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRParamConfigResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.FindAMRParamConfigResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.FindAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRWeightConfigResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.FindAMRWeightConfigResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_GenerateReportAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.GenerateReportAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.ListAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListNewsResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.ListNewsResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListReportAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.ListReportAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_ListUserResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.ListUserResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_RegisterUserResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.RegisterUserResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_UploadAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.UploadAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserActivationResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.UserActivationResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_UserDeActivationResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.UserDeActivationResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_internal_model_request.AuthUserReq": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "remember_me": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "logisfy_internal_model_request.CreateParamConfigAMRReq": {
+            "type": "object",
+            "properties": {
+                "cos_phi_kecil_i_max_tm": {
+                    "type": "number"
+                },
+                "cos_phi_kecil_i_max_tr": {
+                    "type": "number"
+                },
+                "cos_phi_kecil_i_tm": {
+                    "type": "number"
+                },
+                "cos_phi_kecil_i_tr": {
+                    "type": "number"
+                },
+                "i_loss_i_tm": {
+                    "type": "number"
+                },
+                "i_loss_i_tr": {
+                    "type": "number"
+                },
+                "i_loss_v_tm": {
+                    "type": "number"
+                },
+                "i_loss_v_tr": {
+                    "type": "number"
+                },
+                "i_low_v_low_tm": {
+                    "type": "number"
+                },
+                "i_low_v_low_tr": {
+                    "type": "number"
+                },
+                "i_unbalance_i_tm": {
+                    "type": "number"
+                },
+                "i_unbalance_i_tr": {
+                    "type": "number"
+                },
+                "i_unbalance_tol_tm": {
+                    "type": "number"
+                },
+                "i_unbalance_tol_tr": {
+                    "type": "number"
+                },
+                "in_greater_i_max_in_tm": {
+                    "type": "number"
+                },
+                "in_greater_i_max_in_tr": {
+                    "type": "number"
+                },
+                "min_indicator_amount": {
+                    "type": "number"
+                },
+                "min_weight": {
+                    "type": "number"
+                },
+                "n_show_recommendation": {
+                    "type": "integer",
+                    "maximum": 2500,
+                    "minimum": 1
+                },
+                "over_current_i_max_tm": {
+                    "type": "number"
+                },
+                "over_current_i_max_tr": {
+                    "type": "number"
+                },
+                "over_voltage_v_max_tm": {
+                    "type": "number"
+                },
+                "over_voltage_v_max_tr": {
+                    "type": "number"
+                },
+                "p_loss_i": {
+                    "type": "number"
+                },
+                "reverse_power_i_tm": {
+                    "type": "number"
+                },
+                "reverse_power_i_tr": {
+                    "type": "number"
+                },
+                "reverse_power_v_tm": {
+                    "type": "number"
+                },
+                "reverse_power_v_tr": {
+                    "type": "number"
+                },
+                "v_drop_i_tm": {
+                    "type": "number"
+                },
+                "v_drop_i_tr": {
+                    "type": "number"
+                },
+                "v_drop_v_tm": {
+                    "type": "number"
+                },
+                "v_drop_v_tr": {
+                    "type": "number"
+                },
+                "v_loss_i_tm": {
+                    "type": "number"
+                },
+                "v_loss_i_tr": {
+                    "type": "number"
+                },
+                "v_loss_v_tm": {
+                    "type": "number"
+                },
+                "v_loss_v_tr": {
+                    "type": "number"
+                }
+            }
+        },
+        "logisfy_internal_model_request.CreateWeightConfigAMRReq": {
+            "type": "object",
+            "properties": {
+                "active_p_loss": {
+                    "type": "number"
+                },
+                "cos_phi_kecil": {
+                    "type": "number"
+                },
+                "current_loop": {
+                    "type": "number"
+                },
+                "freeze": {
+                    "type": "number"
+                },
+                "i_loss": {
+                    "type": "number"
+                },
+                "i_low_v_low": {
+                    "type": "number"
+                },
+                "reverse_power": {
+                    "type": "number"
+                },
+                "unbalance_i": {
+                    "type": "number"
+                },
+                "v_direct_drop": {
+                    "type": "number"
+                },
+                "v_indirect_drop": {
+                    "type": "number"
+                },
+                "v_loss": {
+                    "type": "number"
+                }
+            }
+        },
+        "logisfy_internal_model_request.GenerateReportAMRReq": {
+            "type": "object"
+        },
+        "logisfy_internal_model_request.RegisterUserReq": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "UP3": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "unit_induk": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_internal_model_response.AuthUserResp": {
+            "type": "object",
+            "properties": {
+                "role": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_internal_model_response.CreateParamConfigAMRResp": {
+            "type": "object",
+            "properties": {
+                "amr_config_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.CreateWeightConfigAMRResp": {
+            "type": "object",
+            "properties": {
+                "amr_weight_config_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.DeleteUserResp": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.FindAMRParamConfigResp": {
+            "type": "object",
+            "properties": {
+                "amr_config_id": {
+                    "type": "integer"
+                },
+                "amr_id": {
+                    "type": "integer"
+                },
+                "cosPhiKecilUpperLimitTR": {
+                    "type": "number"
+                },
+                "cos_phi_kecil_i_tm": {
+                    "type": "number"
+                },
+                "cos_phi_kecil_i_tr": {
+                    "type": "number"
+                },
+                "cos_phi_kecil_upper_limit_tm": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "i_loss_i_max_tm": {
+                    "type": "number"
+                },
+                "i_loss_i_max_tr": {
+                    "type": "number"
+                },
+                "i_loss_i_tm": {
+                    "type": "number"
+                },
+                "i_loss_i_tr": {
+                    "type": "number"
+                },
+                "i_low_v_low_tm": {
+                    "type": "number"
+                },
+                "i_low_v_low_tr": {
+                    "type": "number"
+                },
+                "i_unbalance_i_tm": {
+                    "type": "number"
+                },
+                "i_unbalance_i_tr": {
+                    "type": "number"
+                },
+                "i_unbalance_tol_tm": {
+                    "type": "number"
+                },
+                "i_unbalance_tol_tr": {
+                    "type": "number"
+                },
+                "in_greater_i_max_in_tm": {
+                    "type": "number"
+                },
+                "in_greater_i_max_in_tr": {
+                    "type": "number"
+                },
+                "min_indicator_amount": {
+                    "type": "number"
+                },
+                "min_weight": {
+                    "type": "number"
+                },
+                "n_show_recommendation": {
+                    "type": "integer"
+                },
+                "over_current_i_max_tm": {
+                    "type": "number"
+                },
+                "over_current_i_max_tr": {
+                    "type": "number"
+                },
+                "over_voltage_v_max_tm": {
+                    "type": "number"
+                },
+                "over_voltage_v_max_tr": {
+                    "type": "number"
+                },
+                "p_loss_i": {
+                    "type": "number"
+                },
+                "reverse_power_i_tm": {
+                    "type": "number"
+                },
+                "reverse_power_i_tr": {
+                    "type": "number"
+                },
+                "reverse_power_v_tm": {
+                    "type": "number"
+                },
+                "reverse_power_v_tr": {
+                    "type": "number"
+                },
+                "v_drop_i_tm": {
+                    "type": "number"
+                },
+                "v_drop_i_tr": {
+                    "type": "number"
+                },
+                "v_drop_v_tm": {
+                    "type": "number"
+                },
+                "v_drop_v_tr": {
+                    "type": "number"
+                },
+                "v_loss_i_tm": {
+                    "type": "number"
+                },
+                "v_loss_i_tr": {
+                    "type": "number"
+                },
+                "v_loss_v_tm": {
+                    "type": "number"
+                },
+                "v_loss_v_tr": {
+                    "type": "number"
+                }
+            }
+        },
+        "logisfy_internal_model_response.FindAMRResp": {
+            "type": "object",
+            "properties": {
+                "amr_id": {
+                    "type": "integer"
+                },
+                "auto_deleted_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "extension": {
+                    "$ref": "#/definitions/logisfy_core_enum.CTXEnumExtension"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "read_date": {
+                    "type": "string"
+                },
+                "row_numbers": {
+                    "type": "integer"
+                },
+                "stage_process": {
+                    "$ref": "#/definitions/logisfy_core_enum.CTXEnumStageProcess"
+                }
+            }
+        },
+        "logisfy_internal_model_response.FindAMRWeightConfigResp": {
+            "type": "object",
+            "properties": {
+                "active_p_loss": {
+                    "type": "number"
+                },
+                "amr_id": {
+                    "type": "integer"
+                },
+                "amr_weight_config_id": {
+                    "type": "integer"
+                },
+                "cos_phi_kecil": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "current_loop": {
+                    "type": "number"
+                },
+                "freeze": {
+                    "type": "number"
+                },
+                "i_loss": {
+                    "type": "number"
+                },
+                "i_low_v_low": {
+                    "type": "number"
+                },
+                "in_greated_imax": {
+                    "type": "number"
+                },
+                "over_current": {
+                    "type": "number"
+                },
+                "over_voltage": {
+                    "type": "number"
+                },
+                "reverse_power": {
+                    "type": "number"
+                },
+                "unbalance_i": {
+                    "type": "number"
+                },
+                "v_direct_drop": {
+                    "type": "number"
+                },
+                "v_indirect_drop": {
+                    "type": "number"
+                },
+                "v_loss": {
+                    "type": "number"
+                }
+            }
+        },
+        "logisfy_internal_model_response.GenerateReportAMRResp": {
+            "type": "object",
+            "properties": {
+                "amr_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListAMR": {
+            "type": "object",
+            "properties": {
+                "amr_id": {
+                    "type": "integer"
+                },
+                "auto_deleted_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "extension": {
+                    "$ref": "#/definitions/logisfy_core_enum.CTXEnumExtension"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "read_date": {
+                    "type": "string"
+                },
+                "row_numbers": {
+                    "type": "integer"
+                },
+                "stage_process": {
+                    "$ref": "#/definitions/logisfy_core_enum.CTXEnumStageProcess"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListAMRResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/logisfy_internal_model_response.ListAMR"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListNews": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "url_to_image": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListNewsResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/logisfy_internal_model_response.ListNews"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListReport": {
+            "type": "object",
+            "properties": {
+                "active_p_loss": {
+                    "type": "boolean"
+                },
+                "amr_detail_id": {
+                    "type": "integer"
+                },
+                "cos_phi_kecil": {
+                    "type": "boolean"
+                },
+                "current_loop": {
+                    "type": "boolean"
+                },
+                "freeze": {
+                    "type": "boolean"
+                },
+                "i_loss": {
+                    "type": "boolean"
+                },
+                "i_low_v_low": {
+                    "type": "boolean"
+                },
+                "in_greater_i_max": {
+                    "type": "boolean"
+                },
+                "location_code": {
+                    "type": "string"
+                },
+                "location_type": {
+                    "$ref": "#/definitions/logisfy_core_enum.CTXEnumLocationType"
+                },
+                "over_i": {
+                    "type": "boolean"
+                },
+                "over_v": {
+                    "type": "boolean"
+                },
+                "reverse_power": {
+                    "type": "boolean"
+                },
+                "tariff": {
+                    "type": "string"
+                },
+                "total_weighted_value": {
+                    "type": "number"
+                },
+                "unbalance_i": {
+                    "type": "boolean"
+                },
+                "v_drop": {
+                    "type": "boolean"
+                },
+                "v_loss": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListReportAMRResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/logisfy_internal_model_response.ListReport"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListUser": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_login": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "unit_induk": {
+                    "type": "string"
+                },
+                "up3": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ListUserResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/logisfy_internal_model_response.ListUser"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_items": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.RegisterUserResp": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.UploadAMRResp": {
+            "type": "object",
+            "properties": {
+                "amr_id": {
+                    "type": "integer"
+                },
+                "data_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.UserActivationResp": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.UserDeActivationResp": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
