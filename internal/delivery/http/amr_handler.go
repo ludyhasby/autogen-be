@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"log/slog"
 	coreresponse "logisfy/core/response"
 	helpergenerator "logisfy/helper/generator"
@@ -579,4 +580,141 @@ func (handler *AMRHandler) Report(fiberCtx *fiber.Ctx) error {
 		Latency: helpergenerator.GetLatency(timeIn),
 		Data:    &response,
 	})
+}
+
+// Delete
+//
+//	@Summary		Delete AMR
+//	@Description	Delete AMR
+//	@Tags			AMR
+//	@Produce		json
+//	@Param			amr_id		path		uint64		true	"AMR ID"
+//	@Success		200			{object}	coreresponse.ApiResponse[modelresponse.DeleteAMRResp]	"Result"
+//	@Failure		400			{object}	coreresponse.ApiResponse[modelresponse.DeleteAMRResp]	"Result"
+//	@Router			/user/amr/:amr_id [delete]
+//	@Security		Bearer
+func (handler *AMRHandler) Delete(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AMRHandler")
+	ctx, span := tr.Start(ctx, "FindAMR()")
+	defer span.End()
+
+	requestData := &modelrequest.DeleteAMRReq{
+		AMRID: fiberCtx.Params("amr_id"),
+	}
+
+	// exec usecase
+	response, exc := handler.UseCase.Delete(ctx, requestData)
+	if exc != nil {
+		handler.Log.Warn("AMRHandler.Delete()", "UseCase.Delete()", "warn", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.DeleteAMRResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+	return fiberCtx.Status(fiber.StatusOK).JSON(coreresponse.ApiResponse[modelresponse.DeleteAMRResp]{
+		Tin:     timeIn,
+		Tout:    time.Now(),
+		Success: true,
+		Status:  fiber.StatusOK,
+		Error:   nil,
+		Latency: helpergenerator.GetLatency(timeIn),
+		Data:    &response,
+	})
+}
+
+// Summary
+//
+//	@Summary		Get Summary AMR
+//	@Description	Get Summary AMR by AMR ID
+//	@Tags			AMR
+//	@Accept			json
+//	@Produce		json
+//	@Param			amr_id		path		uint64									true				"AMR ID"
+//	@Success		200			{object}	coreresponse.ApiResponse[modelresponse.SummaryAMRResp]	"Result"
+//	@Router			/user/amr/:amr_id/summary [get]
+//	@Security		Bearer
+func (handler *AMRHandler) Summary(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AMRHandler")
+	ctx, span := tr.Start(ctx, "Summary()")
+	defer span.End()
+
+	// Pointing Param
+	requestData := &modelrequest.SummaryAMRReq{}
+	requestData.AMRID = fiberCtx.Params("amr_id")
+
+	// exec usecase
+	response, exc := handler.UseCase.Summary(ctx, requestData)
+	if exc != nil {
+		handler.Log.Warn("AMRHandler.Summary()", "UseCase.Summary()", "warn", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.SummaryAMRResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	return fiberCtx.Status(fiber.StatusOK).JSON(coreresponse.ApiResponse[modelresponse.SummaryAMRResp]{
+		Tin:     timeIn,
+		Tout:    time.Now(),
+		Success: true,
+		Status:  fiber.StatusOK,
+		Error:   nil,
+		Latency: helpergenerator.GetLatency(timeIn),
+		Data:    &response,
+	})
+}
+
+// DownloadTemplate
+//
+//	@Summary		Download AMR template file
+//	@Description	Download the Excel template file (.xlsx) for uploading AMR data
+//	@Tags			AMR
+//	@Accept			json
+//	@Produce		octet-stream
+//	@Success		200	{file}	binary	"XLSX Template file"
+//	@Failure		500	{object}	coreresponse.ApiResponse[any]	"Error"
+//	@Router			/user/amr/template [get]
+//	@Security		Bearer
+func (handler *AMRHandler) DownloadTemplate(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AMRHandler")
+	ctx, span := tr.Start(ctx, "DownloadTemplate()")
+	defer span.End()
+
+	// exec usecase
+	response, exc := handler.UseCase.DownloadTemplate(ctx)
+	if exc != nil {
+		handler.Log.Warn("AMRHandler.DownloadTemplate()", "UseCase.DownloadTemplate()", "warn", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.DownloadAMRTemplateResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	fiberCtx.Set("Content-Type", response.ContentType)
+	fiberCtx.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, response.FileName))
+
+	return fiberCtx.Send(response.XLSXBytes)
 }

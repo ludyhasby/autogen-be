@@ -1,7 +1,9 @@
 package entity
 
 import (
+	helperconverter "logisfy/helper/converter"
 	modelrequest "logisfy/internal/model/request"
+	modelresponse "logisfy/internal/model/response"
 	"time"
 )
 
@@ -72,5 +74,28 @@ func (t AMRWeightConfigEntity) Create(req *modelrequest.CreateWeightConfigAMRReq
 	if req.Freeze != nil {
 		amrWeightConfigEntity.Freeze = *req.Freeze
 	}
+	return
+}
+
+func (t AMRWeightConfigEntity) ConvertToResp(weightConfigEntity *AMRWeightConfigEntity) (resp modelresponse.FindAMRWeightConfigResp) {
+	createdAtStr := helperconverter.ConvertTimeToString(&weightConfigEntity.CreatedAt)
+
+	resp.AMRID = weightConfigEntity.AMRID
+	resp.AMRWeightConfigID = weightConfigEntity.AMRWeightConfigID
+	resp.VIndirectDrop = weightConfigEntity.VIndirectDrop
+	resp.VDirectDrop = weightConfigEntity.VDirectDrop
+	resp.VLoss = weightConfigEntity.VLoss
+	resp.CosPhiKecil = weightConfigEntity.CosPhiKecil
+	resp.ILoss = weightConfigEntity.ILoss
+	resp.InGreatedImax = weightConfigEntity.InGreatedImax
+	resp.OverCurrent = weightConfigEntity.OverCurrent
+	resp.OverVoltage = weightConfigEntity.OverVoltage
+	resp.ReversePower = weightConfigEntity.ReversePower
+	resp.UnbalanceI = weightConfigEntity.UnbalanceI
+	resp.ILowVLow = weightConfigEntity.ILowVLow
+	resp.CurrentLoop = weightConfigEntity.CurrentLoop
+	resp.ActivePLoss = weightConfigEntity.ActivePLoss
+	resp.Freeze = weightConfigEntity.Freeze
+	resp.CreatedAt = createdAtStr
 	return
 }

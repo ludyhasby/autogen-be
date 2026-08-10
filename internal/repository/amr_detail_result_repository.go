@@ -100,3 +100,38 @@ func (r *AMRDetailResultRepository) Report(tx *gorm.DB, amrID uint64, param core
 	totalPages = int32(math.Ceil(float64(totalItems) / float64(pageSize)))
 	return
 }
+
+func (r *AMRDetailResultRepository) Summary(tx *gorm.DB, amrID uint64) (result entity.SummaryAMRDetailResult, err error) {
+	ctx := tx.Statement.Context
+
+	tr := otel.Tracer("repository.AMRDetailResultRepository")
+	ctx, span := tr.Start(ctx, "Summary()")
+	defer span.End()
+
+	err = tx.WithContext(ctx).
+		Table(entity.AMRDetailResultEntity{}.TableName()+" AS adr").
+		Select(`
+            COALESCE(SUM(adr.v_drop::int), 0) AS total_v_drop,
+            COALESCE(SUM(adr.v_loss::int), 0) AS total_v_loss,
+            COALESCE(SUM(adr.cos_phi_kecil::int), 0) AS total_cos_phi_kecil,
+            COALESCE(SUM(adr.i_loss::int), 0) AS total_i_loss,
+            COALESCE(SUM(adr.over_i::int), 0) AS total_over_i,
+            COALESCE(SUM(adr.over_v::int), 0) AS total_over_v,
+            COALESCE(SUM(adr.unbalance_i::int), 0) AS total_unbalance_i,
+            COALESCE(SUM(adr.i_low_v_low::int), 0) AS total_i_low_v_low,
+            COALESCE(SUM(adr.current_loop::int), 0) AS total_current_loop,
+            COALESCE(SUM(adr.active_p_loss::int), 0) AS total_active_p_loss,
+            COALESCE(SUM(adr.freeze::int), 0) AS total_freeze,
+            COALESCE(SUM(adr.in_greater_i_max::int), 0) AS total_in_greater_i_max,
+            COALESCE(SUM(adr.reverse_power::int), 0) AS total_reverse_power`).
+		Joins(`INNER JOIN `+entity.AMRDetailEntity{}.TableName()+` AS ad ON ad.amr_detail_id = adr.amr_detail_id`).
+		Where("ad.amr_id = ?", amrID).
+		Scan(&result).Error
+
+	if err != nil {
+		r.Log.Error("failed to get AMR detail summary", "method", "AMRDetailResultRepository.Summary()", "sub_method", "tx.Scan()", "amrID", amrID, "error", err.Error())
+		return result, err
+	}
+
+	return result, nil
+}

@@ -3,22 +3,28 @@ package coreenum
 type CTXEnumStageProcess string
 
 const (
+	CTXEnumStageProcessQueue         CTXEnumStageProcess = "QUEUE"
 	CTXEnumStageProcessConfigSetting CTXEnumStageProcess = "CONFIG_SETTING"
 	CTXEnumStageProcessWeightSetting CTXEnumStageProcess = "CONFIG_WEIGHT"
 	CTXEnumStageProcessReady         CTXEnumStageProcess = "READY"
 	CTXEnumStageProcessDone          CTXEnumStageProcess = "DONE"
+	CTXEnumStageProcessProcessing    CTXEnumStageProcess = "PROCESSING"
+	CTXEnumStageProcessFailed        CTXEnumStageProcess = "FAILED"
 )
 
 var CTXEnumStageProcessValues = []CTXEnumStageProcess{
+	CTXEnumStageProcessQueue,
 	CTXEnumStageProcessConfigSetting,
 	CTXEnumStageProcessWeightSetting,
 	CTXEnumStageProcessReady,
 	CTXEnumStageProcessDone,
+	CTXEnumStageProcessProcessing,
+	CTXEnumStageProcessFailed,
 }
 
 func (s *CTXEnumStageProcess) IsValid() bool {
 	switch *s {
-	case CTXEnumStageProcessConfigSetting, CTXEnumStageProcessWeightSetting, CTXEnumStageProcessReady, CTXEnumStageProcessDone:
+	case CTXEnumStageProcessQueue, CTXEnumStageProcessConfigSetting, CTXEnumStageProcessWeightSetting, CTXEnumStageProcessReady, CTXEnumStageProcessDone, CTXEnumStageProcessProcessing, CTXEnumStageProcessFailed:
 		return true
 	}
 	return false
@@ -26,6 +32,8 @@ func (s *CTXEnumStageProcess) IsValid() bool {
 
 func (s *CTXEnumStageProcess) ConvertToStr() string {
 	switch *s {
+	case CTXEnumStageProcessQueue:
+		return "dalam antrian"
 	case CTXEnumStageProcessConfigSetting:
 		return "konfigurasi nilai parameter"
 	case CTXEnumStageProcessWeightSetting:
@@ -34,6 +42,10 @@ func (s *CTXEnumStageProcess) ConvertToStr() string {
 		return "siap diproses"
 	case CTXEnumStageProcessDone:
 		return "sudah selesai diproses"
+	case CTXEnumStageProcessProcessing:
+		return "sedang dalam proses"
+	case CTXEnumStageProcessFailed:
+		return "gagal di proses"
 	}
 	return "tidak diketahui"
 }

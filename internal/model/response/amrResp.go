@@ -31,7 +31,9 @@ type ListAMR struct {
 	ReadDate      string                       `json:"read_date"`
 	StageProcess  coreenum.CTXEnumStageProcess `json:"stage_process"`
 	CreatedAt     string                       `json:"created_at"`
+	UpdatedAt     string                       `json:"updated_at"`
 	AutoDeletedAt string                       `json:"auto_deleted_at"`
+	FailedReason  string                       `json:"failed_reason"`
 }
 type GenerateReportAMRResp struct {
 	AMRID uint64 `json:"amr_id"`
@@ -133,4 +135,35 @@ type FindAMRWeightConfigResp struct {
 	ActivePLoss       float64 `json:"active_p_loss"`
 	Freeze            float64 `json:"freeze"`
 	CreatedAt         string  `json:"created_at"`
+}
+type DeleteAMRResp struct {
+	AMRID uint64 `json:"amr_id"`
+}
+type SummaryAMRResp struct {
+	AMRID              uint64 `json:"amr_id"`
+	Filename           string `json:"filename"`
+	ReadDate           string `json:"read_date"`
+	CreatedAt          string `json:"created_at"`
+	AutoDeletedAt      string `json:"auto_deleted_at"`
+	RowNumbers         int64  `json:"row_numbers"`
+	TotalVDrop         int64  `json:"total_v_drop"`
+	TotalVLoss         int64  `json:"total_v_loss"`
+	TotalCosPhiKecil   int64  `json:"total_cos_phi_kecil"`
+	TotalILoss         int64  `json:"total_i_loss"`
+	TotalOverI         int64  `json:"total_over_i"`
+	TotalOverV         int64  `json:"total_over_v"`
+	TotalUnbalanceI    int64  `json:"total_unbalance_i"`
+	TotalILowVLow      int64  `json:"total_i_low_v_low"`
+	TotalCurrentLoop   int64  `json:"total_current_loop"`
+	TotalActivePLoss   int64  `json:"total_active_p_loss"`
+	TotalFreeze        int64  `json:"total_freeze"`
+	TotalInGreaterIMax int64  `json:"total_in_greater_i_max"`
+	TotalReversePower  int64  `json:"total_reverse_power"`
+	AMRParamConfig     FindAMRParamConfigResp
+	AMRWeightConfig    FindAMRWeightConfigResp
+}
+type DownloadAMRTemplateResp struct {
+	FileName    string `json:"file_name"`
+	ContentType string `json:"content_type"`
+	XLSXBytes   []byte `json:"-"`
 }

@@ -38,6 +38,22 @@ type Report struct {
 	AMRDetailResultEntity
 }
 
+type SummaryAMRDetailResult struct {
+	TotalVDrop         int64
+	TotalVLoss         int64
+	TotalCosPhiKecil   int64
+	TotalILoss         int64
+	TotalOverI         int64
+	TotalOverV         int64
+	TotalUnbalanceI    int64
+	TotalILowVLow      int64
+	TotalCurrentLoop   int64
+	TotalActivePLoss   int64
+	TotalFreeze        int64
+	TotalInGreaterIMax int64
+	TotalReversePower  int64
+}
+
 func (t AMRDetailResultEntity) TableName() string {
 	return "amr_detail_result"
 }

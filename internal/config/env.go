@@ -32,11 +32,16 @@ type Env struct {
 	RowMaxLimit           int
 	NumberBatch           int
 	DeletedDurationInHour int
+	MaxConcurrentUploads  int
+	UploadTempDir         string
 
 	OTelEndpoint string
 
 	NewsAPI      string
 	NewsCronExpr string
+
+	NumberBatchAMRDelete int
+	AMRCronExpr          string
 }
 
 func NewEnv(viper *viper.Viper) *Env {
@@ -70,9 +75,14 @@ func NewEnv(viper *viper.Viper) *Env {
 		RowMaxLimit:           viper.GetInt("ROW_MAX_LIMIT"),
 		NumberBatch:           viper.GetInt("NUMBER_BATCH"),
 		DeletedDurationInHour: viper.GetInt("DELETED_DURATION_IN_HOUR"),
+		MaxConcurrentUploads:  viper.GetInt("MAX_CONCURRENT_UPLOADS"),
+		UploadTempDir:         viper.GetString("UPLOAD_TEMP_DIR"),
 
 		OTelEndpoint: viper.GetString("OTEL_ENDPOINT"),
 		NewsAPI:      viper.GetString("NEWS_API"),
 		NewsCronExpr: viper.GetString("NEWS_CRON_EXPR"),
+
+		NumberBatchAMRDelete: viper.GetInt("NUMBER_BATCH_AMR_DELETE"),
+		AMRCronExpr:          viper.GetString("AMR_CRON_EXPR"),
 	}
 }

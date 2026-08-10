@@ -161,7 +161,7 @@ func (handler *AuthHandler) Login(fiberCtx *fiber.Ctx) error {
 // @Success		200			{object}	coreresponse.ApiResponse[modelresponse.UserActivationResp]	"Result"
 // @Failure		400			{object}	coreresponse.ApiResponse[modelresponse.UserActivationResp]	"Result"
 // @Router		/admin/auth/:user_id/activation [put]
-// @Security		Bearer
+// @Security	Bearer
 func (handler *AuthHandler) Activation(fiberCtx *fiber.Ctx) error {
 	var timeIn = time.Now()
 	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
