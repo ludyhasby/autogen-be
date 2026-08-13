@@ -3,3 +3,4 @@
 /log
 *.sql
 docker-compose-local.yaml
+.env.production
