@@ -1,7 +1,6 @@
 package entity
 
 import (
-	coreenum "logisfy/core/enum"
 	"logisfy/helper/crypto"
 	helperprocess "logisfy/helper/process"
 	modelresponse "logisfy/internal/model/response"
@@ -31,10 +30,7 @@ type AMRDetailResultEntity struct {
 }
 
 type Report struct {
-	AMRDetailID         uint64
-	LocationCodeEncrypt []byte
-	LocationType        coreenum.CTXEnumLocationType
-	Tariff              string
+	AMRDetailEntity
 	AMRDetailResultEntity
 }
 
@@ -176,7 +172,7 @@ func (t AMRDetailResultEntity) ConvertToReport(reports []Report, crypto crypto.C
 	for _, report := range reports {
 		locationCode := t.decrypt(report.LocationCodeEncrypt, crypto)
 		resp = append(resp, modelresponse.ListReport{
-			AMRDetailID:        report.AMRDetailID,
+			AMRDetailID:        report.AMRDetailEntity.AMRDetailID,
 			LocationCode:       locationCode,
 			LocationType:       report.LocationType,
 			Tariff:             report.Tariff,

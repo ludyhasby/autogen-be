@@ -56,7 +56,7 @@ func (r *AMRDetailResultRepository) Report(tx *gorm.DB, amrID uint64, param core
 
 	conditionJoin := (&entity.AMRDetailEntity{}).TableName() + " AS ad ON " +
 		(&entity.AMRDetailResultEntity{}).TableName() + ".amr_detail_id = ad.amr_detail_id"
-	selectData := "ad.amr_detail_id, ad.amr_id, ad.location_code_encrypt, ad.location_type, ad.tariff, " +
+	selectData := "ad.*, " +
 		(&entity.AMRDetailResultEntity{}).TableName() + ".v_drop, " +
 		(&entity.AMRDetailResultEntity{}).TableName() + ".v_loss, " +
 		(&entity.AMRDetailResultEntity{}).TableName() + ".cos_phi_kecil, " +

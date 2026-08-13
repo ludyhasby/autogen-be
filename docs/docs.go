@@ -536,6 +536,114 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/amr/:amr_id/export": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Export Data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Export Data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search Parameter",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting Parameter",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "XLSX Template file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp"
+                        }
+                    },
+                    "500": {
+                        "description": "Error",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/amr/:amr_id/export-recommendation": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Export Recommendation Data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AMR"
+                ],
+                "summary": "Export Recommendation Data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search Parameter",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sorting Parameter",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "XLSX Template file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp"
+                        }
+                    },
+                    "500": {
+                        "description": "Error",
+                        "schema": {
+                            "$ref": "#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp"
+                        }
+                    }
+                }
+            }
+        },
         "/user/amr/:amr_id/generate-report": {
             "post": {
                 "description": "Create Generate Report AMR",
@@ -1074,6 +1182,58 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/logisfy_internal_model_response.DeleteUserResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.ExportAMRResp"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "latency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tin": {
+                    "type": "string"
+                },
+                "tout": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/logisfy_internal_model_response.ExportRecommendationAMRResp"
                 },
                 "error": {
                     "type": "string"
@@ -1673,6 +1833,28 @@ const docTemplate = `{
             "properties": {
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ExportAMRResp": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "logisfy_internal_model_response.ExportRecommendationAMRResp": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
                 }
             }
         },

@@ -90,3 +90,11 @@ type DeleteAMRReq struct {
 type SummaryAMRReq struct {
 	AMRID string `json:"-"`
 }
+type ExportAMRReq struct {
+	AMRID     string         `json:"-"`
+	QueryInfo core.QueryInfo `json:"-"`
+}
+type ExportRecommendationAMRReq struct {
+	AMRID     string         `json:"-"`
+	QueryInfo core.QueryInfo `json:"-"`
+}

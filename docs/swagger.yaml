@@ -138,6 +138,40 @@ definitions:
       tout:
         type: string
     type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ExportAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ExportRecommendationAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
   logisfy_core_response.ApiResponse-logisfy_internal_model_response_FindAMRParamConfigResp:
     properties:
       data:
@@ -519,6 +553,20 @@ definitions:
     properties:
       user_id:
         type: integer
+    type: object
+  logisfy_internal_model_response.ExportAMRResp:
+    properties:
+      content_type:
+        type: string
+      file_name:
+        type: string
+    type: object
+  logisfy_internal_model_response.ExportRecommendationAMRResp:
+    properties:
+      content_type:
+        type: string
+      file_name:
+        type: string
     type: object
   logisfy_internal_model_response.FindAMRParamConfigResp:
     properties:
@@ -1220,6 +1268,74 @@ paths:
       security:
       - Bearer: []
       summary: Find AMR
+      tags:
+      - AMR
+  /user/amr/:amr_id/export:
+    get:
+      consumes:
+      - application/json
+      description: Export Data
+      parameters:
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: XLSX Template file
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp'
+        "500":
+          description: Error
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp'
+      security:
+      - Bearer: []
+      summary: Export Data
+      tags:
+      - AMR
+  /user/amr/:amr_id/export-recommendation:
+    get:
+      consumes:
+      - application/json
+      description: Export Recommendation Data
+      parameters:
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: XLSX Template file
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp'
+        "500":
+          description: Error
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp'
+      security:
+      - Bearer: []
+      summary: Export Recommendation Data
       tags:
       - AMR
   /user/amr/:amr_id/generate-report:

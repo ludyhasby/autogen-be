@@ -686,7 +686,7 @@ func (handler *AMRHandler) Summary(fiberCtx *fiber.Ctx) error {
 //	@Tags			AMR
 //	@Accept			json
 //	@Produce		octet-stream
-//	@Success		200	{file}	binary	"XLSX Template file"
+//	@Success		200	{file}		binary	"XLSX Template file"
 //	@Failure		500	{object}	coreresponse.ApiResponse[any]	"Error"
 //	@Router			/user/amr/template [get]
 //	@Security		Bearer
@@ -703,6 +703,134 @@ func (handler *AMRHandler) DownloadTemplate(fiberCtx *fiber.Ctx) error {
 	if exc != nil {
 		handler.Log.Warn("AMRHandler.DownloadTemplate()", "UseCase.DownloadTemplate()", "warn", exc.Error())
 		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.DownloadAMRTemplateResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	fiberCtx.Set("Content-Type", response.ContentType)
+	fiberCtx.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, response.FileName))
+
+	return fiberCtx.Send(response.XLSXBytes)
+}
+
+// Export
+//
+//	@Summary		Export Data
+//	@Description	Export Data
+//	@Tags			AMR
+//	@Accept			json
+//	@Produce		json
+//	@Param			filter				query		string									false				"Search Parameter"
+//	@Param			sort				query		string									false				"Sorting Parameter"
+//	@Success		200					{file}		binary									"XLSX Template file"
+//	@Failure		500					{object}	coreresponse.ApiResponse[modelresponse.ExportAMRResp]		"Error"
+//	@Failure      	400   				{object}  	coreresponse.ApiResponse[modelresponse.ExportAMRResp]  		"Bad Request"
+//	@Router			/user/amr/:amr_id/export [get]
+//	@Security		Bearer
+func (handler *AMRHandler) Export(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AMRHandler")
+	ctx, span := tr.Start(ctx, "Export()")
+	defer span.End()
+
+	// Get Param
+	queryInfo, err := helpergenerator.GenerateQueryInfoPostgreSQL(fiberCtx)
+	if err != nil {
+		errString := err.Error()
+		handler.Log.Info("AMRHandler.Export()", "helpergenerator.GenerateQueryInfoPostgreSQL()", "Info", err)
+		return fiberCtx.Status(fiber.StatusBadRequest).JSON(coreresponse.ApiResponse[modelresponse.ExportAMRResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  fiber.StatusBadRequest,
+			Error:   &errString,
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+	// Pointing Param
+	requestData := &modelrequest.ExportAMRReq{
+		AMRID:     fiberCtx.Params("amr_id"),
+		QueryInfo: queryInfo,
+	}
+
+	// exec usecase
+	response, exc := handler.UseCase.Export(ctx, requestData)
+	if exc != nil {
+		handler.Log.Warn("AMRHandler.Export() failed", "usecase", "UseCase.Export()", "error", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.ExportAMRResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	fiberCtx.Set("Content-Type", response.ContentType)
+	fiberCtx.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, response.FileName))
+
+	return fiberCtx.Send(response.XLSXBytes)
+}
+
+// ExportRecommendation
+//
+//	@Summary		Export Recommendation Data
+//	@Description	Export Recommendation Data
+//	@Tags			AMR
+//	@Accept			json
+//	@Produce		json
+//	@Param			filter				query		string									false				"Search Parameter"
+//	@Param			sort				query		string									false				"Sorting Parameter"
+//	@Success		200					{file}		binary									"XLSX Template file"
+//	@Failure		500					{object}	coreresponse.ApiResponse[modelresponse.ExportRecommendationAMRResp]		"Error"
+//	@Failure      	400   				{object}  	coreresponse.ApiResponse[modelresponse.ExportRecommendationAMRResp]  		"Bad Request"
+//	@Router			/user/amr/:amr_id/export-recommendation [get]
+//	@Security		Bearer
+func (handler *AMRHandler) ExportRecommendation(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AMRHandler")
+	ctx, span := tr.Start(ctx, "ExportRecommendation()")
+	defer span.End()
+
+	// Get Param
+	queryInfo, err := helpergenerator.GenerateQueryInfoPostgreSQL(fiberCtx)
+	if err != nil {
+		errString := err.Error()
+		handler.Log.Info("AMRHandler.ExportRecommendation()", "helpergenerator.GenerateQueryInfoPostgreSQL()", "Info", err)
+		return fiberCtx.Status(fiber.StatusBadRequest).JSON(coreresponse.ApiResponse[modelresponse.ExportRecommendationAMRResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  fiber.StatusBadRequest,
+			Error:   &errString,
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+	// Pointing Param
+	requestData := &modelrequest.ExportRecommendationAMRReq{
+		AMRID:     fiberCtx.Params("amr_id"),
+		QueryInfo: queryInfo,
+	}
+
+	// exec usecase
+	response, exc := handler.UseCase.ExportRecommendation(ctx, requestData)
+	if exc != nil {
+		handler.Log.Warn("AMRHandler.ExportRecommendation() failed", "usecase", "UseCase.ExportRecommendation()", "error", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.ExportRecommendationAMRResp]{
 			Tin:     timeIn,
 			Tout:    time.Now(),
 			Success: false,

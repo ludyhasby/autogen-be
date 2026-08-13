@@ -167,3 +167,13 @@ type DownloadAMRTemplateResp struct {
 	ContentType string `json:"content_type"`
 	XLSXBytes   []byte `json:"-"`
 }
+type ExportAMRResp struct {
+	FileName    string `json:"file_name"`
+	ContentType string `json:"content_type"`
+	XLSXBytes   []byte `json:"-"`
+}
+type ExportRecommendationAMRResp struct {
+	FileName    string `json:"file_name"`
+	ContentType string `json:"content_type"`
+	XLSXBytes   []byte `json:"-"`
+}

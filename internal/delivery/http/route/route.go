@@ -75,6 +75,8 @@ func (c *RouteConfig) SetupUserRoute() {
 	amrRoute.Get("/:amr_id/param-config", c.AMRHandler.FindParamConfig)
 	amrRoute.Post("/:amr_id/weight-config", c.AMRHandler.CreateWeightConfig)
 	amrRoute.Get("/:amr_id/weight-config", c.AMRHandler.FindWeightConfig)
+	amrRoute.Get("/:amr_id/export", c.AMRHandler.Export)
+	amrRoute.Get("/:amr_id/export-recommendation", c.AMRHandler.ExportRecommendation)
 }
 
 func (c *RouteConfig) SetupAdminRoute() {

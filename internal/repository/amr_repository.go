@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"logisfy/core"
 	coreenum "logisfy/core/enum"
+	helperchecker "logisfy/helper/checker"
 	"logisfy/internal/entity"
 	"math"
 
@@ -70,6 +71,9 @@ func (r *AMRRepository) List(tx *gorm.DB, param core.QueryInfo) (results []*enti
 	tr := otel.Tracer("repository.AMRRepository")
 	ctx, span := tr.Start(ctx, "List()")
 	defer span.End()
+
+	// filter by user
+	helperchecker.FilterUserID(ctx, &param)
 
 	// default sort
 	sortDefault := dancok.SortDescriptor{

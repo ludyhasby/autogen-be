@@ -1387,3 +1387,467 @@ func (u *AMRUseCase) DownloadTemplate(ctx context.Context) (resp modelresponse.D
 
 	return
 }
+
+func (u *AMRUseCase) Export(ctx context.Context, req *modelrequest.ExportAMRReq) (resp modelresponse.ExportAMRResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AMRUseCase")
+	ctx, span := tr.Start(ctx, "Export()")
+	defer span.End()
+
+	amrID, err := strconv.Atoi(req.AMRID)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export() failed parsing amrID", "method", "strconv.Atoi()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+
+	amrEntity, err := u.AMRRepository.Find(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export() failed finding amr", "method", "AMRRepository.Find()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data amr", err)
+		return
+	}
+	if !amrEntity.CheckFound() {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	userID, err := strconv.Atoi(ctx.Value(string(coreenum.CTXEnumIDUserID)).(string))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export() failed parsing userID", "method", "strconv.Atoi() userID", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	if amrEntity.UserID != uint64(userID) {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	if amrEntity.StageProcess != coreenum.CTXEnumStageProcessDone {
+		exc = helperexception.Conflict("laporan belum tersedia, data amr berada di stage " + amrEntity.StageProcess.ConvertToStr())
+		return
+	}
+
+	fileExcel := excelize.NewFile()
+	defer func() {
+		if err := fileExcel.Close(); err != nil {
+			u.Log.Warn("AMRUseCase.Export() failed closing file", "method", "fileExcel.Close()", "error", err.Error())
+		}
+	}()
+
+	detailSheetName := "Detail"
+	index, err := fileExcel.NewSheet(detailSheetName)
+	if err != nil {
+		u.Log.Error("AMRUseCase.Export()", "method", "fileExcel.NewSheet()", "error", err.Error())
+		exc = helperexception.Internal("gagal membuat sheet baru", err)
+		return
+	}
+	_ = fileExcel.DeleteSheet("Sheet1")
+
+	titleStyle, alignCenter := helperprocess.Style(fileExcel)
+
+	fileExcel.SetActiveSheet(index)
+	_ = fileExcel.MergeCell(detailSheetName, "A1", "AU1")
+	_ = fileExcel.SetCellValue(detailSheetName, "A1", "DETAIL AUTOGEN REPORT")
+	_ = fileExcel.SetCellStyle(detailSheetName, "A1", "A1", titleStyle)
+	columns := []struct {
+		Col    string
+		Header string
+		Width  float64
+	}{
+		{"A", "LOCATION_CODE", 20},
+		{"B", "TYPE_METER", 15},
+		{"C", "TARIFF", 15},
+		{"D", "POWER", 15},
+		{"E", "LOCATION_TYPE", 15},
+		{"F", "READ_DATE", 15},
+		{"G", "VOLTAGE_L1", 15},
+		{"H", "VOLTAGE_L2", 15},
+		{"I", "VOLTAGE_L3", 15},
+		{"J", "VOLTAGE_TYPE", 15},
+		{"K", "CURRENT_L1", 15},
+		{"L", "CURRENT_L2", 15},
+		{"M", "CURRENT_L3", 15},
+		{"N", "CURRENT_N", 15},
+		{"O", "VOLTAGE_ANGLE_L1", 15},
+		{"P", "VOLTAGE_ANGLE_L2", 15},
+		{"Q", "VOLTAGE_ANGLE_L3", 15},
+		{"R", "CURRENT_ANGLE_L1", 15},
+		{"S", "CURRENT_ANGLE_L2", 15},
+		{"T", "CURRENT_ANGLE_L3", 15},
+		{"U", "POWER_FACTOR_L1", 15},
+		{"V", "POWER_FACTOR_L2", 15},
+		{"W", "POWER_FACTOR_L3", 15},
+		{"X", "ACTIVE_POWER_L1", 15},
+		{"Y", "ACTIVE_POWER_L2", 15},
+		{"Z", "ACTIVE_POWER_L3", 15},
+		{"AA", "APPARENT_POWER_L1", 15},
+		{"AB", "APPARENT_POWER_L2", 15},
+		{"AC", "APPARENT_POWER_L3", 15},
+		{"AD", "KWH_ABS_TOTAL", 15},
+		{"AE", "BILL_REFF_KWH", 15},
+		{"AF", "PHASE", 15},
+		{"AG", "MEASUREMENT_TYPE", 15},
+		{"AH", "V_DROP", 10},
+		{"AI", "V_LOSS", 10},
+		{"AJ", "COS_PHI_KECIL", 10},
+		{"AK", "I_LOSS", 10},
+		{"AL", "IN_GREATER_I_MAX", 10},
+		{"AM", "OVER_I", 10},
+		{"AN", "OVER_V", 10},
+		{"AO", "REVERSE_POWER", 10},
+		{"AP", "UNBALANCE_I", 10},
+		{"AQ", "I_LOW_V_LOW", 10},
+		{"AR", "CURRENT_LOOP", 10},
+		{"AS", "ACTIVE_P_LOSS", 10},
+		{"AT", "FREEZE", 10},
+		{"AU", "TOTAL_WEIGHTED_VALUE", 20},
+	}
+	for _, col := range columns {
+		cell := col.Col + "2"
+		_ = fileExcel.SetCellValue(detailSheetName, cell, col.Header)
+		_ = fileExcel.SetColWidth(detailSheetName, col.Col, col.Col, col.Width)
+		_ = fileExcel.SetCellStyle(detailSheetName, cell, cell, alignCenter)
+	}
+
+	page := int32(1)
+	rowOffset := 3
+	batchSize := int32(u.NumberBatch)
+
+	for {
+		req.QueryInfo.SelectParameter.PageDescriptor.PageIndex = page
+		req.QueryInfo.SelectParameter.PageDescriptor.PageSize = batchSize
+
+		reportEntities, _, totalPages, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), req.QueryInfo)
+		if err != nil {
+			u.Log.Warn("AMRUseCase.Export() failed listing report entities", "method", "AMRDetailResultRepository.Report()", "page", page, "error", err.Error())
+			exc = helperexception.Internal("gagal saat proses list detail amr", err)
+			return
+		}
+
+		if len(reportEntities) == 0 {
+			break
+		}
+
+		for i, entity := range reportEntities {
+			locationCodeDecrypt, err := u.Crypto.Decrypt(entity.LocationCodeEncrypt)
+			if err != nil {
+				u.Log.Error("AMRUseCase.Export() failed decrypting location code", "method", "Crypto.Decrypt()", "error", err.Error())
+				exc = helperexception.Internal("gagal mendeskripsi location code", err)
+				return
+			}
+			readDateStr := helperconverter.ConvertTimeToString(&entity.ReadDate)
+
+			rowVals := []interface{}{
+				locationCodeDecrypt,
+				entity.TypeMeter,
+				entity.Tariff,
+				entity.Power,
+				entity.LocationType.String(),
+				readDateStr,
+				entity.VoltageL1,
+				entity.VoltageL2,
+				entity.VoltageL3,
+				entity.VoltageType.String(),
+				entity.CurrentL1,
+				entity.CurrentL2,
+				entity.CurrentL3,
+				entity.CurrentN,
+				entity.VoltageAngleL1,
+				entity.VoltageAngleL2,
+				entity.VoltageAngleL3,
+				entity.CurrentAngleL1,
+				entity.CurrentAngleL2,
+				entity.CurrentAngleL3,
+				entity.PowerFactorL1,
+				entity.PowerFactorL2,
+				entity.PowerFactorL3,
+				entity.ActivePowerL1,
+				entity.ActivePowerL2,
+				entity.ActivePowerL3,
+				entity.ApparentPowerL1,
+				entity.ApparentPowerL2,
+				entity.ApparentPowerL3,
+				entity.KWHAbsTotal,
+				entity.BillReffKwh,
+				entity.Phase,
+				entity.MeasurementType.String(),
+				entity.VDrop,
+				entity.VLoss,
+				entity.CosPhiKecil,
+				entity.ILoss,
+				entity.InGreaterIMax,
+				entity.OverI,
+				entity.OverV,
+				entity.ReversePower,
+				entity.UnbalanceI,
+				entity.ILowVLow,
+				entity.CurrentLoop,
+				entity.ActivePLoss,
+				entity.Freeze,
+				entity.TotalWeightedValue,
+			}
+
+			currentRow := rowOffset + int(i)
+			err = fileExcel.SetSheetRow(detailSheetName, "A"+strconv.Itoa(currentRow), &rowVals)
+			if err != nil {
+				u.Log.Error("AMRUseCase.Export()", "method", "fileExcel.SetSheetRow()", "row", currentRow, "error", err.Error())
+				exc = helperexception.Internal("gagal menulis data ke sheet", err)
+				return
+			}
+		}
+
+		if page >= totalPages {
+			break
+		}
+		rowOffset += len(reportEntities)
+		page++
+	}
+
+	buffer, err := fileExcel.WriteToBuffer()
+	if err != nil {
+		u.Log.Error("AMRUseCase.Export() failed writing buffer", "method", "fileExcel.WriteToBuffer()", "error", err.Error())
+		exc = helperexception.Internal("gagal menulis file excel ke buffer", err)
+		return
+	}
+
+	fileName := amrEntity.Filename
+	if !strings.HasSuffix(strings.ToLower(fileName), ".xlsx") {
+		ext := filepath.Ext(fileName)
+		fileName = strings.TrimSuffix(fileName, ext) + ".xlsx"
+	}
+
+	resp.FileName = "autogen_amr_" + fileName
+	resp.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	resp.XLSXBytes = buffer.Bytes()
+	return
+}
+
+func (u *AMRUseCase) ExportRecommendation(ctx context.Context, req *modelrequest.ExportRecommendationAMRReq) (resp modelresponse.ExportRecommendationAMRResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AMRUseCase")
+	ctx, span := tr.Start(ctx, "Export()")
+	defer span.End()
+
+	amrID, err := strconv.Atoi(req.AMRID)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "strconv.Atoi()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+
+	amrEntity, err := u.AMRRepository.Find(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "AMRRepository.Find()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data amr", err)
+		return
+	}
+	if !amrEntity.CheckFound() {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	userID, err := strconv.Atoi(ctx.Value(string(coreenum.CTXEnumIDUserID)).(string))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "strconv.Atoi() userID", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	if amrEntity.UserID != uint64(userID) {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	if amrEntity.StageProcess != coreenum.CTXEnumStageProcessDone {
+		exc = helperexception.Conflict("laporan belum tersedia, data amr berada di stage " + amrEntity.StageProcess.ConvertToStr())
+		return
+	}
+
+	paramConfigEntity, err := u.AMRConfigRepository.FindByAMRID(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "AMRConfigRepository.FindByAMRID()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data konfigurasi parameter AMR", err)
+		return
+	}
+	if !paramConfigEntity.CheckFound() {
+		exc = helperexception.NotFound("data konfigurasi parameter AMR tidak ditemukan")
+		return
+	}
+
+	fileExcel := excelize.NewFile()
+	defer func() {
+		if err := fileExcel.Close(); err != nil {
+			u.Log.Warn("AMRUseCase.Export() failed closing file", "method", "fileExcel.Close()", "error", err.Error())
+		}
+	}()
+
+	detailSheetName := "Detail"
+	index, err := fileExcel.NewSheet(detailSheetName)
+	if err != nil {
+		u.Log.Error("AMRUseCase.Export() failed creating sheet", "method", "fileExcel.NewSheet()", "error", err.Error())
+		exc = helperexception.Internal("gagal membuat sheet baru", err)
+		return
+	}
+	_ = fileExcel.DeleteSheet("Sheet1")
+
+	titleStyle, alignCenter := helperprocess.Style(fileExcel)
+
+	fileExcel.SetActiveSheet(index)
+	_ = fileExcel.MergeCell(detailSheetName, "A1", "AU1")
+	_ = fileExcel.SetCellValue(detailSheetName, "A1", "DETAIL AUTOGEN REKOMENDASI TOP "+strconv.Itoa(paramConfigEntity.NShowRecommendation))
+	_ = fileExcel.SetCellStyle(detailSheetName, "A1", "A1", titleStyle)
+	columns := []struct {
+		Col    string
+		Header string
+		Width  float64
+	}{
+		{"A", "LOCATION_CODE", 20},
+		{"B", "TYPE_METER", 15},
+		{"C", "TARIFF", 15},
+		{"D", "POWER", 15},
+		{"E", "LOCATION_TYPE", 15},
+		{"F", "READ_DATE", 15},
+		{"G", "VOLTAGE_L1", 15},
+		{"H", "VOLTAGE_L2", 15},
+		{"I", "VOLTAGE_L3", 15},
+		{"J", "VOLTAGE_TYPE", 15},
+		{"K", "CURRENT_L1", 15},
+		{"L", "CURRENT_L2", 15},
+		{"M", "CURRENT_L3", 15},
+		{"N", "CURRENT_N", 15},
+		{"O", "VOLTAGE_ANGLE_L1", 15},
+		{"P", "VOLTAGE_ANGLE_L2", 15},
+		{"Q", "VOLTAGE_ANGLE_L3", 15},
+		{"R", "CURRENT_ANGLE_L1", 15},
+		{"S", "CURRENT_ANGLE_L2", 15},
+		{"T", "CURRENT_ANGLE_L3", 15},
+		{"U", "POWER_FACTOR_L1", 15},
+		{"V", "POWER_FACTOR_L2", 15},
+		{"W", "POWER_FACTOR_L3", 15},
+		{"X", "ACTIVE_POWER_L1", 15},
+		{"Y", "ACTIVE_POWER_L2", 15},
+		{"Z", "ACTIVE_POWER_L3", 15},
+		{"AA", "APPARENT_POWER_L1", 15},
+		{"AB", "APPARENT_POWER_L2", 15},
+		{"AC", "APPARENT_POWER_L3", 15},
+		{"AD", "KWH_ABS_TOTAL", 15},
+		{"AE", "BILL_REFF_KWH", 15},
+		{"AF", "PHASE", 15},
+		{"AG", "MEASUREMENT_TYPE", 15},
+		{"AH", "V_DROP", 10},
+		{"AI", "V_LOSS", 10},
+		{"AJ", "COS_PHI_KECIL", 10},
+		{"AK", "I_LOSS", 10},
+		{"AL", "IN_GREATER_I_MAX", 10},
+		{"AM", "OVER_I", 10},
+		{"AN", "OVER_V", 10},
+		{"AO", "REVERSE_POWER", 10},
+		{"AP", "UNBALANCE_I", 10},
+		{"AQ", "I_LOW_V_LOW", 10},
+		{"AR", "CURRENT_LOOP", 10},
+		{"AS", "ACTIVE_P_LOSS", 10},
+		{"AT", "FREEZE", 10},
+		{"AU", "TOTAL_WEIGHTED_VALUE", 20},
+	}
+	for _, col := range columns {
+		cell := col.Col + "2"
+		_ = fileExcel.SetCellValue(detailSheetName, cell, col.Header)
+		_ = fileExcel.SetColWidth(detailSheetName, col.Col, col.Col, col.Width)
+		_ = fileExcel.SetCellStyle(detailSheetName, cell, cell, alignCenter)
+	}
+
+	req.QueryInfo.SelectParameter.PageDescriptor.PageIndex = 1
+	req.QueryInfo.SelectParameter.PageDescriptor.PageSize = int32(paramConfigEntity.NShowRecommendation)
+	rowOffset := 3
+
+	reportEntities, _, _, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), req.QueryInfo)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "AMRDetailResultRepository.Report()", "error", err.Error())
+		exc = helperexception.Internal("gagal saat proses list detail amr", err)
+		return
+	}
+
+	for i, entity := range reportEntities {
+		locationCodeDecrypt, err := u.Crypto.Decrypt(entity.LocationCodeEncrypt)
+		if err != nil {
+			u.Log.Error("AMRUseCase.ExportRecommendation()", "method", "Crypto.Decrypt()", "error", err.Error())
+			exc = helperexception.Internal("gagal mendeskripsi location code", err)
+			return
+		}
+		readDateStr := helperconverter.ConvertTimeToString(&entity.ReadDate)
+
+		rowVals := []interface{}{
+			locationCodeDecrypt,
+			entity.TypeMeter,
+			entity.Tariff,
+			entity.Power,
+			entity.LocationType.String(),
+			readDateStr,
+			entity.VoltageL1,
+			entity.VoltageL2,
+			entity.VoltageL3,
+			entity.VoltageType.String(),
+			entity.CurrentL1,
+			entity.CurrentL2,
+			entity.CurrentL3,
+			entity.CurrentN,
+			entity.VoltageAngleL1,
+			entity.VoltageAngleL2,
+			entity.VoltageAngleL3,
+			entity.CurrentAngleL1,
+			entity.CurrentAngleL2,
+			entity.CurrentAngleL3,
+			entity.PowerFactorL1,
+			entity.PowerFactorL2,
+			entity.PowerFactorL3,
+			entity.ActivePowerL1,
+			entity.ActivePowerL2,
+			entity.ActivePowerL3,
+			entity.ApparentPowerL1,
+			entity.ApparentPowerL2,
+			entity.ApparentPowerL3,
+			entity.KWHAbsTotal,
+			entity.BillReffKwh,
+			entity.Phase,
+			entity.MeasurementType.String(),
+			entity.VDrop,
+			entity.VLoss,
+			entity.CosPhiKecil,
+			entity.ILoss,
+			entity.InGreaterIMax,
+			entity.OverI,
+			entity.OverV,
+			entity.ReversePower,
+			entity.UnbalanceI,
+			entity.ILowVLow,
+			entity.CurrentLoop,
+			entity.ActivePLoss,
+			entity.Freeze,
+			entity.TotalWeightedValue,
+		}
+
+		currentRow := rowOffset + int(i)
+		err = fileExcel.SetSheetRow(detailSheetName, "A"+strconv.Itoa(currentRow), &rowVals)
+		if err != nil {
+			u.Log.Error("AMRUseCase.ExportRecommendation()", "method", "fileExcel.SetSheetRow()", "row", currentRow, "error", err.Error())
+			exc = helperexception.Internal("gagal menulis data ke sheet", err)
+			return
+		}
+	}
+
+	buffer, err := fileExcel.WriteToBuffer()
+	if err != nil {
+		u.Log.Error("AMRUseCase.ExportRecommendation()", "method", "fileExcel.WriteToBuffer()", "error", err.Error())
+		exc = helperexception.Internal("gagal menulis file excel ke buffer", err)
+		return
+	}
+
+	fileName := amrEntity.Filename
+	if !strings.HasSuffix(strings.ToLower(fileName), ".xlsx") {
+		ext := filepath.Ext(fileName)
+		fileName = strings.TrimSuffix(fileName, ext) + ".xlsx"
+	}
+
+	resp.FileName = "report_autogen_amr_recommendation_" + fileName
+	resp.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	resp.XLSXBytes = buffer.Bytes()
+	return
+}
