@@ -1,7 +1,9 @@
 package entity
 
 import (
+	helperconverter "logisfy/helper/converter"
 	modelrequest "logisfy/internal/model/request"
+	modelresponse "logisfy/internal/model/response"
 	"time"
 )
 
@@ -169,5 +171,50 @@ func (t AMRConfigEntity) Create(req *modelrequest.CreateParamConfigAMRReq, amrID
 	if req.NShowRecommendation != nil {
 		amrConfigEntity.NShowRecommendation = *req.NShowRecommendation
 	}
+	return
+}
+
+func (t AMRConfigEntity) ConvertToResp(paramConfigEntity *AMRConfigEntity) (resp modelresponse.FindAMRParamConfigResp) {
+	createdAtStr := helperconverter.ConvertTimeToString(&paramConfigEntity.CreatedAt)
+
+	resp.AMRID = paramConfigEntity.AMRID
+	resp.AMRConfigID = paramConfigEntity.AMRConfigID
+	resp.VDropVTM = paramConfigEntity.VDropVTM
+	resp.VDropVTR = paramConfigEntity.VDropVTR
+	resp.VDropITM = paramConfigEntity.VDropITM
+	resp.VDropITR = paramConfigEntity.VDropITR
+	resp.VLossVTM = paramConfigEntity.VLossVTM
+	resp.VLossVTR = paramConfigEntity.VLossVTR
+	resp.VLossITM = paramConfigEntity.VLossITM
+	resp.VLossITR = paramConfigEntity.VLossITR
+	resp.CosPhiKecilITM = paramConfigEntity.CosPhiKecilITM
+	resp.CosPhiKecilITR = paramConfigEntity.CosPhiKecilITR
+	resp.CosPhiKecilUpperLimitTM = paramConfigEntity.CosPhiKecilUpperLimitTM
+	resp.CosPhiKecilUpperLimitTR = paramConfigEntity.CosPhiKecilUpperLimitTR
+	resp.ILossITM = paramConfigEntity.ILossITM
+	resp.ILossITR = paramConfigEntity.ILossITR
+	resp.ILossIMaxTM = paramConfigEntity.ILossIMaxTM
+	resp.ILossIMaxTR = paramConfigEntity.ILossIMaxTR
+	resp.InGreaterIMaxInTM = paramConfigEntity.InGreaterIMaxInTM
+	resp.InGreaterIMaxInTR = paramConfigEntity.InGreaterIMaxInTR
+	resp.OverCurrentIMaxTM = paramConfigEntity.OverCurrentIMaxTM
+	resp.OverCurrentIMaxTR = paramConfigEntity.OverCurrentIMaxTR
+	resp.OverVoltageVMaxTM = paramConfigEntity.OverVoltageVMaxTM
+	resp.OverVoltageVMaxTR = paramConfigEntity.OverVoltageVMaxTR
+	resp.ReversePowerVTM = paramConfigEntity.ReversePowerVTM
+	resp.ReversePowerVTR = paramConfigEntity.ReversePowerVTR
+	resp.ReversePowerITM = paramConfigEntity.ReversePowerITM
+	resp.ReversePowerITR = paramConfigEntity.ReversePowerITR
+	resp.IUnbalanceTolTM = paramConfigEntity.IUnbalanceTolTM
+	resp.IUnbalanceTolTR = paramConfigEntity.IUnbalanceTolTR
+	resp.IUnbalanceITM = paramConfigEntity.IUnbalanceITM
+	resp.IUnbalanceITR = paramConfigEntity.IUnbalanceITR
+	resp.PLossI = paramConfigEntity.PLossI
+	resp.ILowVLowTM = paramConfigEntity.ILowVLowTM
+	resp.ILowVLowTR = paramConfigEntity.ILowVLowTR
+	resp.MinIndicatorAmount = paramConfigEntity.MinIndicatorAmount
+	resp.MinWeight = paramConfigEntity.MinWeight
+	resp.NShowRecommendation = paramConfigEntity.NShowRecommendation
+	resp.CreatedAt = createdAtStr
 	return
 }

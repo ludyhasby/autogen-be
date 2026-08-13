@@ -21,16 +21,38 @@ definitions:
     - CTXEnumLocationTypePreCustomer
   logisfy_core_enum.CTXEnumStageProcess:
     enum:
+    - QUEUE
     - CONFIG_SETTING
     - CONFIG_WEIGHT
     - READY
     - DONE
+    - PROCESSING
+    - FAILED
     type: string
     x-enum-varnames:
+    - CTXEnumStageProcessQueue
     - CTXEnumStageProcessConfigSetting
     - CTXEnumStageProcessWeightSetting
     - CTXEnumStageProcessReady
     - CTXEnumStageProcessDone
+    - CTXEnumStageProcessProcessing
+    - CTXEnumStageProcessFailed
+  logisfy_core_response.ApiResponse-any:
+    properties:
+      data: {}
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
   logisfy_core_response.ApiResponse-logisfy_internal_model_response_AuthUserResp:
     properties:
       data:
@@ -82,10 +104,61 @@ definitions:
       tout:
         type: string
     type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.DeleteAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
   logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteUserResp:
     properties:
       data:
         $ref: '#/definitions/logisfy_internal_model_response.DeleteUserResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ExportAMRResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.ExportRecommendationAMRResp'
       error:
         type: string
       latency:
@@ -239,6 +312,23 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/logisfy_internal_model_response.RegisterUserResp'
+      error:
+        type: string
+      latency:
+        type: string
+      status:
+        type: integer
+      success:
+        type: boolean
+      tin:
+        type: string
+      tout:
+        type: string
+    type: object
+  logisfy_core_response.ApiResponse-logisfy_internal_model_response_SummaryAMRResp:
+    properties:
+      data:
+        $ref: '#/definitions/logisfy_internal_model_response.SummaryAMRResp'
       error:
         type: string
       latency:
@@ -454,10 +544,29 @@ definitions:
       amr_weight_config_id:
         type: integer
     type: object
+  logisfy_internal_model_response.DeleteAMRResp:
+    properties:
+      amr_id:
+        type: integer
+    type: object
   logisfy_internal_model_response.DeleteUserResp:
     properties:
       user_id:
         type: integer
+    type: object
+  logisfy_internal_model_response.ExportAMRResp:
+    properties:
+      content_type:
+        type: string
+      file_name:
+        type: string
+    type: object
+  logisfy_internal_model_response.ExportRecommendationAMRResp:
+    properties:
+      content_type:
+        type: string
+      file_name:
+        type: string
     type: object
   logisfy_internal_model_response.FindAMRParamConfigResp:
     properties:
@@ -611,6 +720,8 @@ definitions:
         type: string
       extension:
         $ref: '#/definitions/logisfy_core_enum.CTXEnumExtension'
+      failed_reason:
+        type: string
       filename:
         type: string
       read_date:
@@ -619,6 +730,8 @@ definitions:
         type: integer
       stage_process:
         $ref: '#/definitions/logisfy_core_enum.CTXEnumStageProcess'
+      updated_at:
+        type: string
     type: object
   logisfy_internal_model_response.ListAMRResp:
     properties:
@@ -756,6 +869,51 @@ definitions:
   logisfy_internal_model_response.RegisterUserResp:
     properties:
       id:
+        type: integer
+    type: object
+  logisfy_internal_model_response.SummaryAMRResp:
+    properties:
+      amr_id:
+        type: integer
+      amrparamConfig:
+        $ref: '#/definitions/logisfy_internal_model_response.FindAMRParamConfigResp'
+      amrweightConfig:
+        $ref: '#/definitions/logisfy_internal_model_response.FindAMRWeightConfigResp'
+      auto_deleted_at:
+        type: string
+      created_at:
+        type: string
+      filename:
+        type: string
+      read_date:
+        type: string
+      row_numbers:
+        type: integer
+      total_active_p_loss:
+        type: integer
+      total_cos_phi_kecil:
+        type: integer
+      total_current_loop:
+        type: integer
+      total_freeze:
+        type: integer
+      total_i_loss:
+        type: integer
+      total_i_low_v_low:
+        type: integer
+      total_in_greater_i_max:
+        type: integer
+      total_over_i:
+        type: integer
+      total_over_v:
+        type: integer
+      total_reverse_power:
+        type: integer
+      total_unbalance_i:
+        type: integer
+      total_v_drop:
+        type: integer
+      total_v_loss:
         type: integer
     type: object
   logisfy_internal_model_response.UploadAMRResp:
@@ -1062,6 +1220,31 @@ paths:
       tags:
       - AMR
   /user/amr/:amr_id:
+    delete:
+      description: Delete AMR
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteAMRResp'
+        "400":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_DeleteAMRResp'
+      security:
+      - Bearer: []
+      summary: Delete AMR
+      tags:
+      - AMR
     get:
       description: Find AMR
       parameters:
@@ -1085,6 +1268,74 @@ paths:
       security:
       - Bearer: []
       summary: Find AMR
+      tags:
+      - AMR
+  /user/amr/:amr_id/export:
+    get:
+      consumes:
+      - application/json
+      description: Export Data
+      parameters:
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: XLSX Template file
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp'
+        "500":
+          description: Error
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportAMRResp'
+      security:
+      - Bearer: []
+      summary: Export Data
+      tags:
+      - AMR
+  /user/amr/:amr_id/export-recommendation:
+    get:
+      consumes:
+      - application/json
+      description: Export Recommendation Data
+      parameters:
+      - description: Search Parameter
+        in: query
+        name: filter
+        type: string
+      - description: Sorting Parameter
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: XLSX Template file
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp'
+        "500":
+          description: Error
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_ExportRecommendationAMRResp'
+      security:
+      - Bearer: []
+      summary: Export Recommendation Data
       tags:
       - AMR
   /user/amr/:amr_id/generate-report:
@@ -1216,6 +1467,30 @@ paths:
       summary: Get Report AMR
       tags:
       - AMR
+  /user/amr/:amr_id/summary:
+    get:
+      consumes:
+      - application/json
+      description: Get Summary AMR by AMR ID
+      parameters:
+      - description: AMR ID
+        format: int64
+        in: path
+        name: amr_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Result
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_SummaryAMRResp'
+      security:
+      - Bearer: []
+      summary: Get Summary AMR
+      tags:
+      - AMR
   /user/amr/:amr_id/weight-config:
     get:
       description: Find AMR Weight Config by amr_id
@@ -1271,6 +1546,27 @@ paths:
           schema:
             $ref: '#/definitions/logisfy_core_response.ApiResponse-logisfy_internal_model_response_CreateWeightConfigAMRResp'
       summary: Create Weight Config
+      tags:
+      - AMR
+  /user/amr/template:
+    get:
+      consumes:
+      - application/json
+      description: Download the Excel template file (.xlsx) for uploading AMR data
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: XLSX Template file
+          schema:
+            type: file
+        "500":
+          description: Error
+          schema:
+            $ref: '#/definitions/logisfy_core_response.ApiResponse-any'
+      security:
+      - Bearer: []
+      summary: Download AMR template file
       tags:
       - AMR
 schemes:

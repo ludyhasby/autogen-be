@@ -9,7 +9,7 @@ type UploadAMRReq struct {
 	File      io.Reader `json:"-"`
 	Size      int64     `json:"-"`
 	Filename  string    `json:"-"`
-	Extension string    `validate:"required,oneof=.xlsx .xls .csv" json:"-"`
+	Extension string    `validate:"required,oneof=.xlsx .xls" json:"-"`
 }
 type CreateParamConfigAMRReq struct {
 	AMRID               string   `json:"-"`
@@ -83,4 +83,18 @@ type FindAMRParamConfigReq struct {
 }
 type FindAMRWeightConfigReq struct {
 	AMRID string `json:"-" validate:"required"`
+}
+type DeleteAMRReq struct {
+	AMRID string `json:"-" validate:"required"`
+}
+type SummaryAMRReq struct {
+	AMRID string `json:"-"`
+}
+type ExportAMRReq struct {
+	AMRID     string         `json:"-"`
+	QueryInfo core.QueryInfo `json:"-"`
+}
+type ExportRecommendationAMRReq struct {
+	AMRID     string         `json:"-"`
+	QueryInfo core.QueryInfo `json:"-"`
 }

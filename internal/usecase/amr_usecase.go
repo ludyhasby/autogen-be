@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	coreenum "logisfy/core/enum"
 	helperconverter "logisfy/helper/converter"
@@ -13,14 +15,19 @@ import (
 	modelrequest "logisfy/internal/model/request"
 	modelresponse "logisfy/internal/model/response"
 	"logisfy/internal/repository"
+	"logisfy/internal/worker"
 	"math"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/xuri/excelize/v2"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
@@ -38,6 +45,9 @@ type AMRUseCase struct {
 	AMRConfigRepository       *repository.AMRConfigRepository
 	AMRWeightConfigRepository *repository.AMRWeightConfigRepository
 	AMRDetailResultRepository *repository.AMRDetailResultRepository
+	UploadTempDir             string
+
+	uploadQueue chan worker.UploadJob
 }
 
 func NewAMRUseCase(
@@ -53,8 +63,10 @@ func NewAMRUseCase(
 	amrConfigRepository *repository.AMRConfigRepository,
 	amrWeightConfigRepository *repository.AMRWeightConfigRepository,
 	amrDetailResultRepository *repository.AMRDetailResultRepository,
+	maxConcurrentUploads int,
+	uploadTempDir string,
 ) *AMRUseCase {
-	return &AMRUseCase{
+	uc := &AMRUseCase{
 		DB:                        db,
 		Log:                       log,
 		Validate:                  validate,
@@ -67,7 +79,13 @@ func NewAMRUseCase(
 		AMRConfigRepository:       amrConfigRepository,
 		AMRWeightConfigRepository: amrWeightConfigRepository,
 		AMRDetailResultRepository: amrDetailResultRepository,
+		UploadTempDir:             uploadTempDir,
+
+		uploadQueue: make(chan worker.UploadJob, maxConcurrentUploads*4),
 	}
+
+	uc.StartUploadWorkers(maxConcurrentUploads)
+	return uc
 }
 
 var headerExpect = []string{
@@ -101,6 +119,17 @@ var headerExpect = []string{
 	"READ_DATE",
 }
 
+func (u *AMRUseCase) StartUploadWorkers(numWorkers int) {
+	for i := 0; i < numWorkers; i++ {
+		go func(workerID int) {
+			u.Log.Info("AMRUseCase.StartUploadWorkers()", "worker started", workerID)
+			for job := range u.uploadQueue {
+				u.processUploadJob(job)
+			}
+		}(i)
+	}
+}
+
 func (u *AMRUseCase) Upload(ctx context.Context, req *modelrequest.UploadAMRReq) (resp modelresponse.UploadAMRResp, exc *helperexception.Exception) {
 	// Init Tracer
 	tr := otel.Tracer("useCase.AMRUseCase")
@@ -108,11 +137,8 @@ func (u *AMRUseCase) Upload(ctx context.Context, req *modelrequest.UploadAMRReq)
 	defer span.End()
 
 	var (
-		err               error
-		amrEntityDetail   *entity.AMRDetailEntity
-		amrDetailEntities []*entity.AMRDetailEntity
-		dataCount         int64
-		cols              []string
+		err       error
+		dataCount int64
 	)
 
 	if err = u.Validate.Struct(req); err != nil {
@@ -129,7 +155,15 @@ func (u *AMRUseCase) Upload(ctx context.Context, req *modelrequest.UploadAMRReq)
 	}
 
 	readTx := u.DB.WithContext(ctx)
-	amrEntityExist, err := u.AMRRepository.FindByUserID(readTx, uint64(userID))
+	eligibleActiveStageProcesses := []coreenum.CTXEnumStageProcess{
+		coreenum.CTXEnumStageProcessQueue,
+		coreenum.CTXEnumStageProcessConfigSetting,
+		coreenum.CTXEnumStageProcessWeightSetting,
+		coreenum.CTXEnumStageProcessReady,
+		coreenum.CTXEnumStageProcessDone,
+		coreenum.CTXEnumStageProcessProcessing,
+	}
+	amrEntityExist, err := u.AMRRepository.FindByUserID(readTx, uint64(userID), eligibleActiveStageProcesses)
 	if err != nil {
 		u.Log.Info("AMRUseCase.Upload()", "AMRRepository().FindByUserID()", "error", err.Error())
 		exc = helperexception.Internal("gagal untuk mencari data amr", err)
@@ -140,122 +174,43 @@ func (u *AMRUseCase) Upload(ctx context.Context, req *modelrequest.UploadAMRReq)
 		return
 	}
 
-	tx := readTx.Begin()
-	defer func() {
-		if exc != nil || err != nil {
-			tx.Rollback()
-		}
-	}()
+	if len(u.uploadQueue) >= cap(u.uploadQueue) {
+		exc = helperexception.PermissionDenied("antrian upload penuh, coba beberapa saat lagi")
+		return
+	}
 
-	amrEntity := (entity.AMREntity{}).Create(uint64(userID), u.Location, u.DeletedDurationInHour, req, 0, coreenum.CTXEnumStageProcessConfigSetting)
-	if err = u.AMRRepository.Create(tx, amrEntity); err != nil {
+	tmpPath, err := u.saveTempFile(req.File, req.Filename)
+	if err != nil {
+		u.Log.Error("AMRUseCase.Upload()", "saveTempFile()", "err", err.Error())
+		exc = helperexception.Internal("gagal untuk menyimpan data", err)
+		return
+	}
+
+	amrEntity := (entity.AMREntity{}).Create(uint64(userID), u.Location, u.DeletedDurationInHour, req, 0, coreenum.CTXEnumStageProcessQueue)
+	if err = u.AMRRepository.Create(readTx, amrEntity); err != nil {
 		u.Log.Error("AMRUseCase.Upload()", "AMRRepository.Create()", "error", err.Error())
 		exc = helperexception.Internal("gagal untuk membuat entity AMR", err)
 		return
 	}
 
-	// Commit TX1 lebih dulu agar amrEntity terlihat di koneksi lain (diperlukan untuk FK di CopyIn)
-	if err = tx.Commit().Error; err != nil {
-		u.Log.Error("AMRUseCase.Upload()", "tx.Commit() phase-1", "error", err.Error())
-		exc = helperexception.Internal("gagal commit entity AMR", err)
+	bgCtx := context.WithValue(context.Background(), string(coreenum.CTXEnumIDUserID), strconv.Itoa(userID))
+	select {
+	case u.uploadQueue <- worker.UploadJob{
+		UseCaseName:     coreenum.CTXEnumUseCaseAMR,
+		UseCaseDetailID: amrEntity.AMRID,
+		UserID:          uint64(userID),
+		FilePath:        tmpPath,
+		Ctx:             bgCtx,
+	}:
+	default:
+		_ = os.Remove(tmpPath)
+		_ = u.AMRRepository.Delete(readTx, amrEntity)
+		exc = helperexception.PermissionDenied("antrian upload penuh, coba beberapa saat lagi")
 		return
 	}
 
-	// Jika CopyIn atau update gagal, hapus amrEntity sebagai kompensasi
-	var copyInSuccess bool
-	defer func() {
-		if !copyInSuccess && amrEntity != nil && amrEntity.AMRID > 0 {
-			cleanupTx := u.DB.WithContext(ctx)
-			if delErr := u.AMRRepository.Delete(cleanupTx, amrEntity); delErr != nil {
-				u.Log.Error("AMRUseCase.Upload()", "AMRRepository.Delete() compensation", "error", delErr.Error())
-			}
-		}
-	}()
-
-	xlsx, err := excelize.OpenReader(req.File)
-	if err != nil {
-		u.Log.Warn("AMRUseCase.Upload()", "excelize.OpenReader()", "warn", err.Error())
-		exc = helperexception.InvalidArgument(err, req)
-		return
-	}
-	defer func() {
-		if closeErr := xlsx.Close(); closeErr != nil {
-			u.Log.Error("AMRUseCase.Upload()", "xlsx.Close()", "error", closeErr.Error())
-			return
-		}
-	}()
-
-	rows, mapIndex, err := helperprocess.ExtractAndValidateHeader(xlsx, headerExpect)
-	if err != nil {
-		u.Log.Warn("AMRUseCase.Upload()", "helperprocess.ExtractAndValidateHeader()", "warn", err.Error())
-		exc = helperexception.InvalidArgument(err, req)
-		return
-	}
-
-	for rows.Next() {
-		dataCount += 1
-		cols, err = rows.Columns()
-		if err != nil {
-			u.Log.Error("AMRUseCase.Upload()", "rows.Columns()", "error", err.Error())
-			exc = helperexception.InvalidArgument(err, req)
-			return
-		}
-
-		amrEntityDetail, err = u.parseRow(cols, dataCount+1, mapIndex, amrEntity.AMRID)
-		if err != nil {
-			u.Log.Error("AMRUseCase.Upload()", "u.parseRow()", "error", err.Error())
-			exc = helperexception.InvalidArgument(err, req)
-			return
-		}
-		amrDetailEntities = append(amrDetailEntities, amrEntityDetail)
-
-		if len(amrDetailEntities) == u.NumberBatch {
-			if err = u.AMRDetailRepository.CopyIn(ctx, amrDetailEntities); err != nil {
-				u.Log.Error("AMRUseCase.Upload()", "AMRDetailRepository.CopyIn()", "error", err.Error())
-				exc = helperexception.Internal("gagal untuk membuat entity detail AMR", err)
-				return
-			}
-			amrDetailEntities = amrDetailEntities[:0]
-		}
-	}
-	if len(amrDetailEntities) > 0 {
-		if err = u.AMRDetailRepository.CopyIn(ctx, amrDetailEntities); err != nil {
-			u.Log.Error("AMRUseCase.Upload()", "AMRDetailRepository.CopyIn()", "error", err.Error())
-			exc = helperexception.Internal("gagal untuk membuat entity detail AMR", err)
-			return
-		}
-		amrDetailEntities = amrDetailEntities[:0]
-	}
-
-	// TX2: update data count pada amrEntity
-	tx2 := u.DB.WithContext(ctx).Begin()
-	defer func() {
-		if exc != nil || err != nil {
-			tx2.Rollback()
-		}
-	}()
-
-	// update data count
-	amrEntity.ReadDate = amrEntityDetail.ReadDate
-	amrEntity.RowNumbers = dataCount
-	if err = u.AMRRepository.Update(tx2, amrEntity); err != nil {
-		u.Log.Error("AMRUseCase.Upload()", "AMRRepository.Update()", "error", err.Error())
-		exc = helperexception.Internal("gagal untuk update jumlah baris", err)
-		return
-	}
-
-	// resp
 	resp.DataCount = dataCount
 	resp.AMRID = amrEntity.AMRID
-
-	// commit TX2
-	if err = tx2.Commit().Error; err != nil {
-		u.Log.Error("AMRUseCase.Upload()", "tx2.Commit()", "error", err.Error())
-		exc = helperexception.Internal("failed to commit update amr", err)
-		return
-	}
-
-	copyInSuccess = true
 	return
 }
 
@@ -561,6 +516,200 @@ func (u *AMRUseCase) parseRow(row []string, rowNumber int64, mapIndex map[string
 	return
 }
 
+func (u *AMRUseCase) saveTempFile(src io.Reader, originalName string) (string, error) {
+	ext := filepath.Ext(originalName)
+	tempDir := u.UploadTempDir
+	if tempDir == "" {
+		tempDir = os.TempDir()
+	}
+	tmpFile, err := os.CreateTemp(tempDir, "amr-*"+ext)
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+	// io.Copy streaming: hanya buffer kecil (32KB) di RAM setiap saat
+	if _, err = io.Copy(tmpFile, src); err != nil {
+		_ = os.Remove(tmpFile.Name())
+		return "", err
+	}
+	return tmpFile.Name(), nil
+}
+
+func (u *AMRUseCase) processUploadJob(job worker.UploadJob) {
+	defer os.Remove(job.FilePath)
+
+	ctx, cancel := context.WithCancel(job.Ctx)
+	defer cancel()
+
+	log := u.Log.With("use_case_name", job.UseCaseName, "use_case_detail_id", job.UseCaseDetailID, "user_id", job.UserID)
+	now := time.Now()
+
+	readTx := u.DB.WithContext(ctx)
+	entityAMR, err := u.AMRRepository.Find(readTx, job.UseCaseDetailID)
+	if err != nil {
+		u.Log.Error("AMRUseCase.processUploadJob()", "AMRRepository().Find()", "error", err.Error())
+		return
+	}
+	if !entityAMR.CheckFound() {
+		u.Log.Error("AMRUseCase.processUploadJob()", "AMRRepository().Find()", "error", "data tidak ditemukan")
+		return
+	}
+	entityAMR.StageProcess = coreenum.CTXEnumStageProcessProcessing
+	err = u.AMRRepository.Update(readTx, entityAMR)
+	if err != nil {
+		u.Log.Error("AMRUseCase.processUploadJob()", "AMRRepository().Update()", "error", err.Error())
+		return
+	}
+
+	xlsx, err := excelize.OpenFile(job.FilePath)
+	if err != nil {
+		log.Error("AMRUseCase.processUploadJob()", "excelize.OpenFile()", "error", err.Error())
+		u.markAMRFailed(readTx, entityAMR, "gagal membuka file excel")
+		return
+	}
+	defer xlsx.Close()
+
+	rows, mapIndex, err := helperprocess.ExtractAndValidateHeader(xlsx, headerExpect)
+	if err != nil {
+		log.Warn("AMRUseCase.processUploadJob()", "excelize.ExtractAndValidateHeader()", "error", err.Error())
+		u.markAMRFailed(readTx, entityAMR, "format header tidak valid "+err.Error())
+		return
+	}
+	const numParseWorkers = 2
+	rawCh := make(chan worker.RowJob, numParseWorkers*2)
+	doneCh := make(chan *entity.AMRDetailEntity, numParseWorkers*2)
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer close(rawCh)
+		var rowNum int64
+		for rows.Next() {
+			rowNum++
+			cols, e := rows.Columns()
+			if e != nil {
+				select {
+				case errCh <- e:
+				default:
+				}
+				return
+			}
+			select {
+			case rawCh <- worker.RowJob{Cols: cols, RowNumber: rowNum + 1}:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	var wg sync.WaitGroup
+	for i := 0; i < numParseWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range rawCh {
+				detail, e := u.parseRow(job.Cols, job.RowNumber, mapIndex, entityAMR.AMRID)
+				if e != nil {
+					select {
+					case errCh <- e:
+					default:
+					}
+					return
+				}
+				select {
+				case doneCh <- detail:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+	go func() { wg.Wait(); close(doneCh) }()
+	// Batcher: collect → CopyIn
+	var (
+		lastDetail *entity.AMRDetailEntity
+		dataCount  int64
+		batch      = make([]*entity.AMRDetailEntity, 0, u.NumberBatch)
+	)
+
+	flushBatch := func() error {
+		if len(batch) == 0 {
+			return nil
+		}
+		if e := u.AMRDetailRepository.CopyIn(ctx, batch, now); e != nil {
+			return e
+		}
+		batch = batch[:0]
+		return nil
+	}
+	var processingErr error
+
+COLLECT:
+	for {
+		select {
+		case detail, ok := <-doneCh:
+			if !ok {
+				break COLLECT
+			}
+			dataCount++
+			lastDetail = detail
+			batch = append(batch, detail)
+			if len(batch) >= u.NumberBatch {
+				if processingErr = flushBatch(); processingErr != nil {
+					break COLLECT
+				}
+			}
+		case e := <-errCh:
+			processingErr = e
+			break COLLECT
+		}
+	}
+	// Cek error dari worker setelah done
+	select {
+	case e := <-errCh:
+		processingErr = e
+	default:
+	}
+	if processingErr != nil {
+		log.Error("AMRUseCase.processUploadJob()", "pipeline error", processingErr.Error())
+		u.markAMRFailed(readTx, entityAMR, processingErr.Error())
+		for i := 0; i < 3; i++ {
+			if err = u.AMRDetailRepository.DeleteByAMRID(readTx, entityAMR.AMRID); err == nil {
+				break
+			}
+			time.Sleep(time.Duration(1<<i) * 500 * time.Millisecond)
+		}
+		return
+	}
+	if err = flushBatch(); err != nil {
+		log.Error("AMRUseCase.processUploadJob()", "flushBatch()", "error", err.Error())
+		u.markAMRFailed(readTx, entityAMR, "gagal menyimpan batch terakhir")
+		return
+	}
+
+	if dataCount == 0 {
+		log.Warn("AMRUseCase.processUploadJob()", "warning", "file tidak memiliki baris data")
+		u.markAMRFailed(readTx, entityAMR, "file tidak memiliki baris data")
+		return
+	}
+	entityAMR.ReadDate = lastDetail.ReadDate
+	entityAMR.RowNumbers = dataCount
+	entityAMR.StageProcess = coreenum.CTXEnumStageProcessConfigSetting
+	if err = u.AMRRepository.Update(readTx, entityAMR); nil != err {
+		log.Error("AMRUseCase.processUploadJob()", "AMRRepository().Update()", "error", err.Error())
+		u.markAMRFailed(readTx, entityAMR, err.Error())
+		return
+	}
+	log.Info("AMRUsecase.processUploadJob()", "status", "DONE", "rows", dataCount)
+}
+
+func (u *AMRUseCase) markAMRFailed(tx *gorm.DB, amrEntity *entity.AMREntity, reason string) {
+	amrEntity.StageProcess = coreenum.CTXEnumStageProcessFailed
+	amrEntity.FailedReason = reason
+	if err := u.AMRRepository.Update(tx, amrEntity); err != nil {
+		u.Log.Error("AMRUseCase.markAMRFailed()", "AMRRepository.Update()", "error", err.Error())
+	}
+}
+
 func (u *AMRUseCase) CreateParamConfig(ctx context.Context, req *modelrequest.CreateParamConfigAMRReq) (resp modelresponse.CreateParamConfigAMRResp, exc *helperexception.Exception) {
 	// Init Tracer
 	tr := otel.Tracer("useCase.AMRUseCase")
@@ -600,6 +749,10 @@ func (u *AMRUseCase) CreateParamConfig(ctx context.Context, req *modelrequest.Cr
 	}
 	if amrEntity.UserID != uint64(userID) {
 		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	if amrEntity.StageProcess != coreenum.CTXEnumStageProcessConfigSetting {
+		exc = helperexception.Conflict("data amr belum siap digunakan, berada di stage " + amrEntity.StageProcess.ConvertToStr())
 		return
 	}
 
@@ -674,6 +827,10 @@ func (u *AMRUseCase) CreateWeightConfig(ctx context.Context, req *modelrequest.C
 		exc = helperexception.NotFound("data amr tidak ditemukan")
 		return
 	}
+	if amrEntity.StageProcess != coreenum.CTXEnumStageProcessWeightSetting {
+		exc = helperexception.Conflict("data amr belum siap digunakan, berada di stage " + amrEntity.StageProcess.ConvertToStr())
+		return
+	}
 
 	tx = tx.Begin()
 	defer func() {
@@ -715,7 +872,7 @@ func (u *AMRUseCase) List(ctx context.Context, req *modelrequest.ListAMRReq) (re
 	tx := u.DB.WithContext(ctx)
 
 	// exec repo
-	entityUserList, items, totalPages, size, err := u.AMRRepository.List(tx, req.QueryInfo)
+	entityAMRList, items, totalPages, size, err := u.AMRRepository.List(tx, req.QueryInfo)
 	if err != nil {
 		u.Log.Info("AMRUseCase.List()", "AMRRepository.List()", "Err", err.Error())
 		exc = helperexception.Internal("gagal saat proses list amr", err)
@@ -723,7 +880,7 @@ func (u *AMRUseCase) List(ctx context.Context, req *modelrequest.ListAMRReq) (re
 	}
 
 	// resp
-	resp.List = (&entity.AMREntity{}).ConvertToList(entityUserList)
+	resp.List = (&entity.AMREntity{}).ConvertToList(entityAMRList)
 	resp.TotalItems = items
 	resp.Page = req.QueryInfo.SelectParameter.PageDescriptor.PageIndex
 	resp.PageSize = size
@@ -1005,51 +1162,11 @@ func (u *AMRUseCase) FindAMRParamConfig(ctx context.Context, req *modelrequest.F
 		return
 	}
 	if !paramConfigEntity.CheckFound() {
-		exc = helperexception.NotFound("data konfigurasi parameter AMR")
+		exc = helperexception.NotFound("data konfigurasi parameter AMR tidak ditemukan")
 		return
 	}
 
-	createdAtStr := helperconverter.ConvertTimeToString(&paramConfigEntity.CreatedAt)
-
-	resp.AMRID = amrEntity.AMRID
-	resp.AMRConfigID = paramConfigEntity.AMRConfigID
-	resp.VDropVTM = paramConfigEntity.VDropVTM
-	resp.VDropVTR = paramConfigEntity.VDropVTR
-	resp.VDropITM = paramConfigEntity.VDropITM
-	resp.VDropITR = paramConfigEntity.VDropITR
-	resp.VLossVTM = paramConfigEntity.VLossVTM
-	resp.VLossVTR = paramConfigEntity.VLossVTR
-	resp.VLossITM = paramConfigEntity.VLossITM
-	resp.VLossITR = paramConfigEntity.VLossITR
-	resp.CosPhiKecilITM = paramConfigEntity.CosPhiKecilITM
-	resp.CosPhiKecilITR = paramConfigEntity.CosPhiKecilITR
-	resp.CosPhiKecilUpperLimitTM = paramConfigEntity.CosPhiKecilUpperLimitTM
-	resp.CosPhiKecilUpperLimitTR = paramConfigEntity.CosPhiKecilUpperLimitTR
-	resp.ILossITM = paramConfigEntity.ILossITM
-	resp.ILossITR = paramConfigEntity.ILossITR
-	resp.ILossIMaxTM = paramConfigEntity.ILossIMaxTM
-	resp.ILossIMaxTR = paramConfigEntity.ILossIMaxTR
-	resp.InGreaterIMaxInTM = paramConfigEntity.InGreaterIMaxInTM
-	resp.InGreaterIMaxInTR = paramConfigEntity.InGreaterIMaxInTR
-	resp.OverCurrentIMaxTM = paramConfigEntity.OverCurrentIMaxTM
-	resp.OverCurrentIMaxTR = paramConfigEntity.OverCurrentIMaxTR
-	resp.OverVoltageVMaxTM = paramConfigEntity.OverVoltageVMaxTM
-	resp.OverVoltageVMaxTR = paramConfigEntity.OverVoltageVMaxTR
-	resp.ReversePowerVTM = paramConfigEntity.ReversePowerVTM
-	resp.ReversePowerVTR = paramConfigEntity.ReversePowerVTR
-	resp.ReversePowerITM = paramConfigEntity.ReversePowerITM
-	resp.ReversePowerITR = paramConfigEntity.ReversePowerITR
-	resp.IUnbalanceTolTM = paramConfigEntity.IUnbalanceTolTM
-	resp.IUnbalanceTolTR = paramConfigEntity.IUnbalanceTolTR
-	resp.IUnbalanceITM = paramConfigEntity.IUnbalanceITM
-	resp.IUnbalanceITR = paramConfigEntity.IUnbalanceITR
-	resp.PLossI = paramConfigEntity.PLossI
-	resp.ILowVLowTM = paramConfigEntity.ILowVLowTM
-	resp.ILowVLowTR = paramConfigEntity.ILowVLowTR
-	resp.MinIndicatorAmount = paramConfigEntity.MinIndicatorAmount
-	resp.MinWeight = paramConfigEntity.MinWeight
-	resp.NShowRecommendation = paramConfigEntity.NShowRecommendation
-	resp.CreatedAt = createdAtStr
+	resp = (entity.AMRConfigEntity{}).ConvertToResp(paramConfigEntity)
 
 	return
 }
@@ -1097,29 +1214,640 @@ func (u *AMRUseCase) FindAMRWeightConfig(ctx context.Context, req *modelrequest.
 		return
 	}
 	if !weightConfigEntity.CheckFound() {
-		exc = helperexception.NotFound("data konfigurasi bobot AMR")
+		exc = helperexception.NotFound("data konfigurasi bobot AMR tidak ditemukan")
 		return
 	}
 
-	createdAtStr := helperconverter.ConvertTimeToString(&weightConfigEntity.CreatedAt)
+	resp = (entity.AMRWeightConfigEntity{}).ConvertToResp(weightConfigEntity)
+
+	return
+}
+
+func (u *AMRUseCase) Delete(ctx context.Context, req *modelrequest.DeleteAMRReq) (resp modelresponse.DeleteAMRResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AMRUseCase")
+	ctx, span := tr.Start(ctx, "Delete()")
+	defer span.End()
+
+	var err error
+
+	amrID, err := strconv.Atoi(req.AMRID)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Delete()", "strconv.Atoi()", "warn", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+	amrEntity, err := u.AMRRepository.Find(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Delete()", "AMRRepository.Find()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data amr", err)
+		return
+	}
+	if !amrEntity.CheckFound() {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	userID, err := strconv.Atoi(ctx.Value(string(coreenum.CTXEnumIDUserID)).(string))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Delete()", "strconv.Atoi() userID", "warn", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	if amrEntity.UserID != uint64(userID) {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+
+	if err = u.AMRRepository.Delete(tx, amrEntity); err != nil {
+		u.Log.Error("AMRUseCase.Delete()", "AMRRepository.Delete()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk menghapus amr", err)
+		return
+	}
 
 	resp.AMRID = amrEntity.AMRID
-	resp.AMRWeightConfigID = weightConfigEntity.AMRWeightConfigID
-	resp.VIndirectDrop = weightConfigEntity.VIndirectDrop
-	resp.VDirectDrop = weightConfigEntity.VDirectDrop
-	resp.VLoss = weightConfigEntity.VLoss
-	resp.CosPhiKecil = weightConfigEntity.CosPhiKecil
-	resp.ILoss = weightConfigEntity.ILoss
-	resp.InGreatedImax = weightConfigEntity.InGreatedImax
-	resp.OverCurrent = weightConfigEntity.OverCurrent
-	resp.OverVoltage = weightConfigEntity.OverVoltage
-	resp.ReversePower = weightConfigEntity.ReversePower
-	resp.UnbalanceI = weightConfigEntity.UnbalanceI
-	resp.ILowVLow = weightConfigEntity.ILowVLow
-	resp.CurrentLoop = weightConfigEntity.CurrentLoop
-	resp.ActivePLoss = weightConfigEntity.ActivePLoss
-	resp.Freeze = weightConfigEntity.Freeze
-	resp.CreatedAt = createdAtStr
+	return
+}
 
+func (u *AMRUseCase) Summary(ctx context.Context, req *modelrequest.SummaryAMRReq) (resp modelresponse.SummaryAMRResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AMRUseCase")
+	ctx, span := tr.Start(ctx, "Summary()")
+	defer span.End()
+
+	var err error
+
+	amrID, err := strconv.Atoi(req.AMRID)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Summary()", "strconv.Atoi()", "warn", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+	amrEntity, err := u.AMRRepository.Find(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Summary()", "AMRRepository.Find()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data amr", err)
+		return
+	}
+	if !amrEntity.CheckFound() {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	userID, err := strconv.Atoi(ctx.Value(string(coreenum.CTXEnumIDUserID)).(string))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.FindAMR()", "strconv.Atoi() userID", "warn", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	if amrEntity.UserID != uint64(userID) {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+
+	paramConfigEntity, err := u.AMRConfigRepository.FindByAMRID(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Summary()", "AMRConfigRepository.FindByAMRID()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data konfigurasi parameter AMR", err)
+		return
+	}
+	if !paramConfigEntity.CheckFound() {
+		exc = helperexception.NotFound("data konfigurasi parameter AMR tidak ditemukan")
+		return
+	}
+
+	weightConfigEntity, err := u.AMRWeightConfigRepository.FindByAMRID(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Summary()", "AMRWeightConfigRepository.FindByAMRID()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data konfigurasi bobot AMR", err)
+		return
+	}
+	if !weightConfigEntity.CheckFound() {
+		exc = helperexception.NotFound("data konfigurasi bobot AMR tidak ditemukan")
+		return
+	}
+
+	summaryAMRDetailResultEntity, err := u.AMRDetailResultRepository.Summary(tx, uint64(amrID))
+	fmt.Println(summaryAMRDetailResultEntity)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Summary()", "AMRDetailResultRepository.Summary()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk membuat ringkasan hasil AMR detail", err)
+		return
+	}
+
+	readDateStr := helperconverter.ConvertTimeToString(&amrEntity.ReadDate)
+	createdAtStr := helperconverter.ConvertTimeToString(&amrEntity.CreatedAt)
+	autoDeletedAt := helperconverter.ConvertTimeToString(&amrEntity.AutoDeletedAt)
+
+	resp.AMRID = amrEntity.AMRID
+	resp.Filename = amrEntity.Filename
+	resp.ReadDate = readDateStr
+	resp.CreatedAt = createdAtStr
+	resp.AutoDeletedAt = autoDeletedAt
+	resp.RowNumbers = amrEntity.RowNumbers
+	resp.TotalVDrop = summaryAMRDetailResultEntity.TotalVDrop
+	resp.TotalVLoss = summaryAMRDetailResultEntity.TotalVLoss
+	resp.TotalCosPhiKecil = summaryAMRDetailResultEntity.TotalCosPhiKecil
+	resp.TotalILoss = summaryAMRDetailResultEntity.TotalILoss
+	resp.TotalVLoss = summaryAMRDetailResultEntity.TotalVLoss
+	resp.TotalOverI = summaryAMRDetailResultEntity.TotalOverI
+	resp.TotalOverV = summaryAMRDetailResultEntity.TotalOverV
+	resp.TotalUnbalanceI = summaryAMRDetailResultEntity.TotalUnbalanceI
+	resp.TotalILowVLow = summaryAMRDetailResultEntity.TotalILowVLow
+	resp.TotalCurrentLoop = summaryAMRDetailResultEntity.TotalCurrentLoop
+	resp.TotalActivePLoss = summaryAMRDetailResultEntity.TotalActivePLoss
+	resp.TotalFreeze = summaryAMRDetailResultEntity.TotalFreeze
+	resp.TotalInGreaterIMax = summaryAMRDetailResultEntity.TotalInGreaterIMax
+	resp.TotalReversePower = summaryAMRDetailResultEntity.TotalReversePower
+	resp.AMRParamConfig = (entity.AMRConfigEntity{}).ConvertToResp(paramConfigEntity)
+	resp.AMRWeightConfig = (entity.AMRWeightConfigEntity{}).ConvertToResp(weightConfigEntity)
+
+	return
+}
+
+func (u *AMRUseCase) DownloadTemplate(ctx context.Context) (resp modelresponse.DownloadAMRTemplateResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AMRUseCase")
+	ctx, span := tr.Start(ctx, "DownloadTemplate()")
+	defer span.End()
+
+	const templatePath = "file/template-amr.xlsx"
+
+	resp.FileName = "template-amr.xlsx"
+	resp.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+	bytes, err := os.ReadFile(templatePath)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		u.Log.Error("AMRUseCase.DownloadTemplate()", "os.ReadFile()", "error", err.Error())
+		exc = helperexception.Internal("gagal membaca file template", err)
+		return
+	}
+	resp.XLSXBytes = bytes
+
+	return
+}
+
+func (u *AMRUseCase) Export(ctx context.Context, req *modelrequest.ExportAMRReq) (resp modelresponse.ExportAMRResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AMRUseCase")
+	ctx, span := tr.Start(ctx, "Export()")
+	defer span.End()
+
+	amrID, err := strconv.Atoi(req.AMRID)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export() failed parsing amrID", "method", "strconv.Atoi()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+
+	amrEntity, err := u.AMRRepository.Find(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export() failed finding amr", "method", "AMRRepository.Find()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data amr", err)
+		return
+	}
+	if !amrEntity.CheckFound() {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	userID, err := strconv.Atoi(ctx.Value(string(coreenum.CTXEnumIDUserID)).(string))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export() failed parsing userID", "method", "strconv.Atoi() userID", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	if amrEntity.UserID != uint64(userID) {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	if amrEntity.StageProcess != coreenum.CTXEnumStageProcessDone {
+		exc = helperexception.Conflict("laporan belum tersedia, data amr berada di stage " + amrEntity.StageProcess.ConvertToStr())
+		return
+	}
+
+	fileExcel := excelize.NewFile()
+	defer func() {
+		if err := fileExcel.Close(); err != nil {
+			u.Log.Warn("AMRUseCase.Export() failed closing file", "method", "fileExcel.Close()", "error", err.Error())
+		}
+	}()
+
+	detailSheetName := "Detail"
+	index, err := fileExcel.NewSheet(detailSheetName)
+	if err != nil {
+		u.Log.Error("AMRUseCase.Export()", "method", "fileExcel.NewSheet()", "error", err.Error())
+		exc = helperexception.Internal("gagal membuat sheet baru", err)
+		return
+	}
+	_ = fileExcel.DeleteSheet("Sheet1")
+
+	titleStyle, alignCenter := helperprocess.Style(fileExcel)
+
+	fileExcel.SetActiveSheet(index)
+	_ = fileExcel.MergeCell(detailSheetName, "A1", "AU1")
+	_ = fileExcel.SetCellValue(detailSheetName, "A1", "DETAIL AUTOGEN REPORT")
+	_ = fileExcel.SetCellStyle(detailSheetName, "A1", "A1", titleStyle)
+	columns := []struct {
+		Col    string
+		Header string
+		Width  float64
+	}{
+		{"A", "LOCATION_CODE", 20},
+		{"B", "TYPE_METER", 15},
+		{"C", "TARIFF", 15},
+		{"D", "POWER", 15},
+		{"E", "LOCATION_TYPE", 15},
+		{"F", "READ_DATE", 15},
+		{"G", "VOLTAGE_L1", 15},
+		{"H", "VOLTAGE_L2", 15},
+		{"I", "VOLTAGE_L3", 15},
+		{"J", "VOLTAGE_TYPE", 15},
+		{"K", "CURRENT_L1", 15},
+		{"L", "CURRENT_L2", 15},
+		{"M", "CURRENT_L3", 15},
+		{"N", "CURRENT_N", 15},
+		{"O", "VOLTAGE_ANGLE_L1", 15},
+		{"P", "VOLTAGE_ANGLE_L2", 15},
+		{"Q", "VOLTAGE_ANGLE_L3", 15},
+		{"R", "CURRENT_ANGLE_L1", 15},
+		{"S", "CURRENT_ANGLE_L2", 15},
+		{"T", "CURRENT_ANGLE_L3", 15},
+		{"U", "POWER_FACTOR_L1", 15},
+		{"V", "POWER_FACTOR_L2", 15},
+		{"W", "POWER_FACTOR_L3", 15},
+		{"X", "ACTIVE_POWER_L1", 15},
+		{"Y", "ACTIVE_POWER_L2", 15},
+		{"Z", "ACTIVE_POWER_L3", 15},
+		{"AA", "APPARENT_POWER_L1", 15},
+		{"AB", "APPARENT_POWER_L2", 15},
+		{"AC", "APPARENT_POWER_L3", 15},
+		{"AD", "KWH_ABS_TOTAL", 15},
+		{"AE", "BILL_REFF_KWH", 15},
+		{"AF", "PHASE", 15},
+		{"AG", "MEASUREMENT_TYPE", 15},
+		{"AH", "V_DROP", 10},
+		{"AI", "V_LOSS", 10},
+		{"AJ", "COS_PHI_KECIL", 10},
+		{"AK", "I_LOSS", 10},
+		{"AL", "IN_GREATER_I_MAX", 10},
+		{"AM", "OVER_I", 10},
+		{"AN", "OVER_V", 10},
+		{"AO", "REVERSE_POWER", 10},
+		{"AP", "UNBALANCE_I", 10},
+		{"AQ", "I_LOW_V_LOW", 10},
+		{"AR", "CURRENT_LOOP", 10},
+		{"AS", "ACTIVE_P_LOSS", 10},
+		{"AT", "FREEZE", 10},
+		{"AU", "TOTAL_WEIGHTED_VALUE", 20},
+	}
+	for _, col := range columns {
+		cell := col.Col + "2"
+		_ = fileExcel.SetCellValue(detailSheetName, cell, col.Header)
+		_ = fileExcel.SetColWidth(detailSheetName, col.Col, col.Col, col.Width)
+		_ = fileExcel.SetCellStyle(detailSheetName, cell, cell, alignCenter)
+	}
+
+	page := int32(1)
+	rowOffset := 3
+	batchSize := int32(u.NumberBatch)
+
+	for {
+		req.QueryInfo.SelectParameter.PageDescriptor.PageIndex = page
+		req.QueryInfo.SelectParameter.PageDescriptor.PageSize = batchSize
+
+		reportEntities, _, totalPages, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), req.QueryInfo)
+		if err != nil {
+			u.Log.Warn("AMRUseCase.Export() failed listing report entities", "method", "AMRDetailResultRepository.Report()", "page", page, "error", err.Error())
+			exc = helperexception.Internal("gagal saat proses list detail amr", err)
+			return
+		}
+
+		if len(reportEntities) == 0 {
+			break
+		}
+
+		for i, entity := range reportEntities {
+			locationCodeDecrypt, err := u.Crypto.Decrypt(entity.LocationCodeEncrypt)
+			if err != nil {
+				u.Log.Error("AMRUseCase.Export() failed decrypting location code", "method", "Crypto.Decrypt()", "error", err.Error())
+				exc = helperexception.Internal("gagal mendeskripsi location code", err)
+				return
+			}
+			readDateStr := helperconverter.ConvertTimeToString(&entity.ReadDate)
+
+			rowVals := []interface{}{
+				locationCodeDecrypt,
+				entity.TypeMeter,
+				entity.Tariff,
+				entity.Power,
+				entity.LocationType.String(),
+				readDateStr,
+				entity.VoltageL1,
+				entity.VoltageL2,
+				entity.VoltageL3,
+				entity.VoltageType.String(),
+				entity.CurrentL1,
+				entity.CurrentL2,
+				entity.CurrentL3,
+				entity.CurrentN,
+				entity.VoltageAngleL1,
+				entity.VoltageAngleL2,
+				entity.VoltageAngleL3,
+				entity.CurrentAngleL1,
+				entity.CurrentAngleL2,
+				entity.CurrentAngleL3,
+				entity.PowerFactorL1,
+				entity.PowerFactorL2,
+				entity.PowerFactorL3,
+				entity.ActivePowerL1,
+				entity.ActivePowerL2,
+				entity.ActivePowerL3,
+				entity.ApparentPowerL1,
+				entity.ApparentPowerL2,
+				entity.ApparentPowerL3,
+				entity.KWHAbsTotal,
+				entity.BillReffKwh,
+				entity.Phase,
+				entity.MeasurementType.String(),
+				entity.VDrop,
+				entity.VLoss,
+				entity.CosPhiKecil,
+				entity.ILoss,
+				entity.InGreaterIMax,
+				entity.OverI,
+				entity.OverV,
+				entity.ReversePower,
+				entity.UnbalanceI,
+				entity.ILowVLow,
+				entity.CurrentLoop,
+				entity.ActivePLoss,
+				entity.Freeze,
+				entity.TotalWeightedValue,
+			}
+
+			currentRow := rowOffset + int(i)
+			err = fileExcel.SetSheetRow(detailSheetName, "A"+strconv.Itoa(currentRow), &rowVals)
+			if err != nil {
+				u.Log.Error("AMRUseCase.Export()", "method", "fileExcel.SetSheetRow()", "row", currentRow, "error", err.Error())
+				exc = helperexception.Internal("gagal menulis data ke sheet", err)
+				return
+			}
+		}
+
+		if page >= totalPages {
+			break
+		}
+		rowOffset += len(reportEntities)
+		page++
+	}
+
+	buffer, err := fileExcel.WriteToBuffer()
+	if err != nil {
+		u.Log.Error("AMRUseCase.Export() failed writing buffer", "method", "fileExcel.WriteToBuffer()", "error", err.Error())
+		exc = helperexception.Internal("gagal menulis file excel ke buffer", err)
+		return
+	}
+
+	fileName := amrEntity.Filename
+	if !strings.HasSuffix(strings.ToLower(fileName), ".xlsx") {
+		ext := filepath.Ext(fileName)
+		fileName = strings.TrimSuffix(fileName, ext) + ".xlsx"
+	}
+
+	resp.FileName = "autogen_amr_" + fileName
+	resp.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	resp.XLSXBytes = buffer.Bytes()
+	return
+}
+
+func (u *AMRUseCase) ExportRecommendation(ctx context.Context, req *modelrequest.ExportRecommendationAMRReq) (resp modelresponse.ExportRecommendationAMRResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AMRUseCase")
+	ctx, span := tr.Start(ctx, "Export()")
+	defer span.End()
+
+	amrID, err := strconv.Atoi(req.AMRID)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "strconv.Atoi()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+
+	amrEntity, err := u.AMRRepository.Find(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "AMRRepository.Find()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data amr", err)
+		return
+	}
+	if !amrEntity.CheckFound() {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	userID, err := strconv.Atoi(ctx.Value(string(coreenum.CTXEnumIDUserID)).(string))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "strconv.Atoi() userID", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	if amrEntity.UserID != uint64(userID) {
+		exc = helperexception.NotFound("data amr tidak ditemukan")
+		return
+	}
+	if amrEntity.StageProcess != coreenum.CTXEnumStageProcessDone {
+		exc = helperexception.Conflict("laporan belum tersedia, data amr berada di stage " + amrEntity.StageProcess.ConvertToStr())
+		return
+	}
+
+	paramConfigEntity, err := u.AMRConfigRepository.FindByAMRID(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "AMRConfigRepository.FindByAMRID()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data konfigurasi parameter AMR", err)
+		return
+	}
+	if !paramConfigEntity.CheckFound() {
+		exc = helperexception.NotFound("data konfigurasi parameter AMR tidak ditemukan")
+		return
+	}
+
+	fileExcel := excelize.NewFile()
+	defer func() {
+		if err := fileExcel.Close(); err != nil {
+			u.Log.Warn("AMRUseCase.Export() failed closing file", "method", "fileExcel.Close()", "error", err.Error())
+		}
+	}()
+
+	detailSheetName := "Detail"
+	index, err := fileExcel.NewSheet(detailSheetName)
+	if err != nil {
+		u.Log.Error("AMRUseCase.Export() failed creating sheet", "method", "fileExcel.NewSheet()", "error", err.Error())
+		exc = helperexception.Internal("gagal membuat sheet baru", err)
+		return
+	}
+	_ = fileExcel.DeleteSheet("Sheet1")
+
+	titleStyle, alignCenter := helperprocess.Style(fileExcel)
+
+	fileExcel.SetActiveSheet(index)
+	_ = fileExcel.MergeCell(detailSheetName, "A1", "AU1")
+	_ = fileExcel.SetCellValue(detailSheetName, "A1", "DETAIL AUTOGEN REKOMENDASI TOP "+strconv.Itoa(paramConfigEntity.NShowRecommendation))
+	_ = fileExcel.SetCellStyle(detailSheetName, "A1", "A1", titleStyle)
+	columns := []struct {
+		Col    string
+		Header string
+		Width  float64
+	}{
+		{"A", "LOCATION_CODE", 20},
+		{"B", "TYPE_METER", 15},
+		{"C", "TARIFF", 15},
+		{"D", "POWER", 15},
+		{"E", "LOCATION_TYPE", 15},
+		{"F", "READ_DATE", 15},
+		{"G", "VOLTAGE_L1", 15},
+		{"H", "VOLTAGE_L2", 15},
+		{"I", "VOLTAGE_L3", 15},
+		{"J", "VOLTAGE_TYPE", 15},
+		{"K", "CURRENT_L1", 15},
+		{"L", "CURRENT_L2", 15},
+		{"M", "CURRENT_L3", 15},
+		{"N", "CURRENT_N", 15},
+		{"O", "VOLTAGE_ANGLE_L1", 15},
+		{"P", "VOLTAGE_ANGLE_L2", 15},
+		{"Q", "VOLTAGE_ANGLE_L3", 15},
+		{"R", "CURRENT_ANGLE_L1", 15},
+		{"S", "CURRENT_ANGLE_L2", 15},
+		{"T", "CURRENT_ANGLE_L3", 15},
+		{"U", "POWER_FACTOR_L1", 15},
+		{"V", "POWER_FACTOR_L2", 15},
+		{"W", "POWER_FACTOR_L3", 15},
+		{"X", "ACTIVE_POWER_L1", 15},
+		{"Y", "ACTIVE_POWER_L2", 15},
+		{"Z", "ACTIVE_POWER_L3", 15},
+		{"AA", "APPARENT_POWER_L1", 15},
+		{"AB", "APPARENT_POWER_L2", 15},
+		{"AC", "APPARENT_POWER_L3", 15},
+		{"AD", "KWH_ABS_TOTAL", 15},
+		{"AE", "BILL_REFF_KWH", 15},
+		{"AF", "PHASE", 15},
+		{"AG", "MEASUREMENT_TYPE", 15},
+		{"AH", "V_DROP", 10},
+		{"AI", "V_LOSS", 10},
+		{"AJ", "COS_PHI_KECIL", 10},
+		{"AK", "I_LOSS", 10},
+		{"AL", "IN_GREATER_I_MAX", 10},
+		{"AM", "OVER_I", 10},
+		{"AN", "OVER_V", 10},
+		{"AO", "REVERSE_POWER", 10},
+		{"AP", "UNBALANCE_I", 10},
+		{"AQ", "I_LOW_V_LOW", 10},
+		{"AR", "CURRENT_LOOP", 10},
+		{"AS", "ACTIVE_P_LOSS", 10},
+		{"AT", "FREEZE", 10},
+		{"AU", "TOTAL_WEIGHTED_VALUE", 20},
+	}
+	for _, col := range columns {
+		cell := col.Col + "2"
+		_ = fileExcel.SetCellValue(detailSheetName, cell, col.Header)
+		_ = fileExcel.SetColWidth(detailSheetName, col.Col, col.Col, col.Width)
+		_ = fileExcel.SetCellStyle(detailSheetName, cell, cell, alignCenter)
+	}
+
+	req.QueryInfo.SelectParameter.PageDescriptor.PageIndex = 1
+	req.QueryInfo.SelectParameter.PageDescriptor.PageSize = int32(paramConfigEntity.NShowRecommendation)
+	rowOffset := 3
+
+	reportEntities, _, _, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), req.QueryInfo)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "AMRDetailResultRepository.Report()", "error", err.Error())
+		exc = helperexception.Internal("gagal saat proses list detail amr", err)
+		return
+	}
+
+	for i, entity := range reportEntities {
+		locationCodeDecrypt, err := u.Crypto.Decrypt(entity.LocationCodeEncrypt)
+		if err != nil {
+			u.Log.Error("AMRUseCase.ExportRecommendation()", "method", "Crypto.Decrypt()", "error", err.Error())
+			exc = helperexception.Internal("gagal mendeskripsi location code", err)
+			return
+		}
+		readDateStr := helperconverter.ConvertTimeToString(&entity.ReadDate)
+
+		rowVals := []interface{}{
+			locationCodeDecrypt,
+			entity.TypeMeter,
+			entity.Tariff,
+			entity.Power,
+			entity.LocationType.String(),
+			readDateStr,
+			entity.VoltageL1,
+			entity.VoltageL2,
+			entity.VoltageL3,
+			entity.VoltageType.String(),
+			entity.CurrentL1,
+			entity.CurrentL2,
+			entity.CurrentL3,
+			entity.CurrentN,
+			entity.VoltageAngleL1,
+			entity.VoltageAngleL2,
+			entity.VoltageAngleL3,
+			entity.CurrentAngleL1,
+			entity.CurrentAngleL2,
+			entity.CurrentAngleL3,
+			entity.PowerFactorL1,
+			entity.PowerFactorL2,
+			entity.PowerFactorL3,
+			entity.ActivePowerL1,
+			entity.ActivePowerL2,
+			entity.ActivePowerL3,
+			entity.ApparentPowerL1,
+			entity.ApparentPowerL2,
+			entity.ApparentPowerL3,
+			entity.KWHAbsTotal,
+			entity.BillReffKwh,
+			entity.Phase,
+			entity.MeasurementType.String(),
+			entity.VDrop,
+			entity.VLoss,
+			entity.CosPhiKecil,
+			entity.ILoss,
+			entity.InGreaterIMax,
+			entity.OverI,
+			entity.OverV,
+			entity.ReversePower,
+			entity.UnbalanceI,
+			entity.ILowVLow,
+			entity.CurrentLoop,
+			entity.ActivePLoss,
+			entity.Freeze,
+			entity.TotalWeightedValue,
+		}
+
+		currentRow := rowOffset + int(i)
+		err = fileExcel.SetSheetRow(detailSheetName, "A"+strconv.Itoa(currentRow), &rowVals)
+		if err != nil {
+			u.Log.Error("AMRUseCase.ExportRecommendation()", "method", "fileExcel.SetSheetRow()", "row", currentRow, "error", err.Error())
+			exc = helperexception.Internal("gagal menulis data ke sheet", err)
+			return
+		}
+	}
+
+	buffer, err := fileExcel.WriteToBuffer()
+	if err != nil {
+		u.Log.Error("AMRUseCase.ExportRecommendation()", "method", "fileExcel.WriteToBuffer()", "error", err.Error())
+		exc = helperexception.Internal("gagal menulis file excel ke buffer", err)
+		return
+	}
+
+	fileName := amrEntity.Filename
+	if !strings.HasSuffix(strings.ToLower(fileName), ".xlsx") {
+		ext := filepath.Ext(fileName)
+		fileName = strings.TrimSuffix(fileName, ext) + ".xlsx"
+	}
+
+	resp.FileName = "report_autogen_amr_recommendation_" + fileName
+	resp.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	resp.XLSXBytes = buffer.Bytes()
 	return
 }

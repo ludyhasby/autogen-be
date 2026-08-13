@@ -17,7 +17,9 @@ type AMREntity struct {
 	ReadDate      time.Time                    `gorm:"not null" json:"read_date"`
 	StageProcess  coreenum.CTXEnumStageProcess `gorm:"not null;default:CONFIG_SETTING" json:"stage_process"`
 	CreatedAt     time.Time                    `gorm:"autoCreateTime;not null"`
-	AutoDeletedAt time.Time                    `gorm:"null" json:"auto_deleted_at"`
+	UpdatedAt     time.Time                    `gorm:"autoUpdateTime;not null"`
+	AutoDeletedAt time.Time                    `gorm:"null;index" json:"auto_deleted_at"`
+	FailedReason  string                       `gorm:"null" json:"failed_reason"`
 
 	UserEntity UserEntity `gorm:"-"`
 }
@@ -44,10 +46,11 @@ func (t AMREntity) Create(userID uint64, location *time.Location, deletionHours 
 
 }
 
-func (t AMREntity) ConvertToList(entities []AMREntity) (resp []modelresponse.ListAMR) {
+func (t AMREntity) ConvertToList(entities []*AMREntity) (resp []modelresponse.ListAMR) {
 	for _, entity := range entities {
 		readDateStr := helperconverter.ConvertTimeToString(&entity.ReadDate)
-		createAtStr := helperconverter.ConvertTimeToString(&entity.CreatedAt)
+		createdAtStr := helperconverter.ConvertTimeToString(&entity.CreatedAt)
+		updatedAtStr := helperconverter.ConvertTimeToString(&entity.UpdatedAt)
 		autoDeletedAtStr := helperconverter.ConvertTimeToString(&entity.AutoDeletedAt)
 		resp = append(resp, modelresponse.ListAMR{
 			AMRID:         entity.AMRID,
@@ -56,8 +59,10 @@ func (t AMREntity) ConvertToList(entities []AMREntity) (resp []modelresponse.Lis
 			RowNumbers:    entity.RowNumbers,
 			ReadDate:      readDateStr,
 			StageProcess:  entity.StageProcess,
-			CreatedAt:     createAtStr,
+			CreatedAt:     createdAtStr,
+			UpdatedAt:     updatedAtStr,
 			AutoDeletedAt: autoDeletedAtStr,
+			FailedReason:  entity.FailedReason,
 		})
 	}
 	return

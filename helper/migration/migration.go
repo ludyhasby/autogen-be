@@ -82,7 +82,7 @@ func ExecForeignKeys(db *gorm.DB) {
 				FOREIGN KEY (user_id)
 				REFERENCES "` + (&entity.UserEntity{}).TableName() + `"(user_id)
 				ON UPDATE CASCADE
-				ON DELETE RESTRICT;
+				ON DELETE CASCADE;
 			END IF;
 		END$$;
 	`).Error; err != nil {
@@ -103,7 +103,7 @@ func ExecForeignKeys(db *gorm.DB) {
 				FOREIGN KEY (amr_id)
 				REFERENCES "` + (&entity.AMREntity{}).TableName() + `"(amr_id)
 				ON UPDATE CASCADE
-				ON DELETE RESTRICT;
+				ON DELETE CASCADE;
 			END IF;
 		END$$;
 	`).Error; err != nil {
@@ -124,7 +124,7 @@ func ExecForeignKeys(db *gorm.DB) {
 				FOREIGN KEY (amr_id)
 				REFERENCES "` + (&entity.AMREntity{}).TableName() + `"(amr_id)
 				ON UPDATE CASCADE
-				ON DELETE RESTRICT;
+				ON DELETE CASCADE;
 			END IF;
 		END$$;
 	`).Error; err != nil {
@@ -145,7 +145,7 @@ func ExecForeignKeys(db *gorm.DB) {
 				FOREIGN KEY (amr_id)
 				REFERENCES "` + (&entity.AMREntity{}).TableName() + `"(amr_id)
 				ON UPDATE CASCADE
-				ON DELETE RESTRICT;
+				ON DELETE CASCADE;
 			END IF;
 		END$$;
 	`).Error; err != nil {
@@ -166,7 +166,7 @@ func ExecForeignKeys(db *gorm.DB) {
 				FOREIGN KEY (amr_detail_id)
 				REFERENCES "` + (&entity.AMRDetailEntity{}).TableName() + `"(amr_detail_id)
 				ON UPDATE CASCADE
-				ON DELETE RESTRICT;
+				ON DELETE CASCADE;
 			END IF;
 		END$$;
 	`).Error; err != nil {

@@ -44,7 +44,7 @@ func Bootstrap(config *BootstrapConfig) {
 
 	// setup useCase
 	authUseCase := usecase.NewAuthUseCase(config.DB, config.Log, config.Validate, config.Env.SecretKey, userRepo)
-	amrUseCase := usecase.NewAMRUseCase(config.DB, config.Log, config.Validate, aesGcm, config.Env.Location, config.Env.DeletedDurationInHour, config.Env.NumberBatch, amrRepo, amrDetailRepo, amrConfigRepo, amrWeightRepo, amrDetailResultRepo)
+	amrUseCase := usecase.NewAMRUseCase(config.DB, config.Log, config.Validate, aesGcm, config.Env.Location, config.Env.NumberBatch, config.Env.DeletedDurationInHour, amrRepo, amrDetailRepo, amrConfigRepo, amrWeightRepo, amrDetailResultRepo, config.Env.MaxConcurrentUploads, config.Env.UploadTempDir)
 	newsUseCase := usecase.NewNewsUseCase(config.DB, config.Log, config.Validate, newsRepo)
 
 	// setup controller

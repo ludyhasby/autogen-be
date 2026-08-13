@@ -48,12 +48,7 @@ func (r *AMRDetailRepository) FindBatchByAMRID(tx *gorm.DB, amrID uint64, lastAM
 	return
 }
 
-// CopyIn melakukan bulk insert menggunakan PostgreSQL COPY FROM STDIN via pgx v5,
-// jauh lebih cepat dibanding INSERT biasa untuk data besar.
-// Catatan: operasi ini berjalan pada koneksi terpisah (bukan dalam GORM tx),
-// pastikan dipanggil sebelum tx.Commit() jika konsistensi transaksi dibutuhkan
-// atau gunakan savepoint secara manual.
-func (r *AMRDetailRepository) CopyIn(ctx context.Context, entities []*entity.AMRDetailEntity) error {
+func (r *AMRDetailRepository) CopyIn(ctx context.Context, entities []*entity.AMRDetailEntity, now time.Time) error {
 	if len(entities) == 0 {
 		return nil
 	}
@@ -62,18 +57,15 @@ func (r *AMRDetailRepository) CopyIn(ctx context.Context, entities []*entity.AMR
 		ctx = context.Background()
 	}
 
-	// Guard: pastikan SqlDB sudah ter-inject
 	if r.SqlDB == nil {
 		return fmt.Errorf("CopyIn: SqlDB belum di-inject ke AMRDetailRepository")
 	}
 
-	// Dapatkan koneksi dedicated dari pool
 	conn, err := r.SqlDB.Conn(ctx)
 	if err != nil {
 		return fmt.Errorf("CopyIn: gagal acquire conn: %w", err)
 	}
 	defer conn.Close()
-
 
 	columns := []string{
 		"amr_id",
@@ -114,10 +106,9 @@ func (r *AMRDetailRepository) CopyIn(ctx context.Context, entities []*entity.AMR
 		"power_factor_l1",
 		"power_factor_l2",
 		"power_factor_l3",
-		"created_at", // di-set manual karena GORM autoCreateTime tidak berjalan di COPY FROM
+		"created_at",
 	}
 
-	now := time.Now()
 	rows := make([][]any, 0, len(entities))
 	for _, e := range entities {
 		rows = append(rows, []any{
@@ -159,7 +150,7 @@ func (r *AMRDetailRepository) CopyIn(ctx context.Context, entities []*entity.AMR
 			e.PowerFactorL1,
 			e.PowerFactorL2,
 			e.PowerFactorL3,
-			now, // created_at
+			now,
 		})
 	}
 
@@ -177,4 +168,20 @@ func (r *AMRDetailRepository) CopyIn(ctx context.Context, entities []*entity.AMR
 		)
 		return err
 	})
+}
+
+func (r *AMRDetailRepository) DeleteByAMRID(tx *gorm.DB, amrID uint64) error {
+	ctx := tx.Statement.Context
+
+	tr := otel.Tracer("repository.AMRDetailRepository")
+	_, span := tr.Start(ctx, "DeleteByAMRID()")
+	defer span.End()
+
+	if err := tx.
+		Where("amr_id = ?", amrID).
+		Delete(&entity.AMRDetailEntity{}).Error; err != nil {
+		r.Log.Error("AMRDetailRepository.DeleteByAMRID()", "Delete()", "error", err.Error())
+		return err
+	}
+	return nil
 }

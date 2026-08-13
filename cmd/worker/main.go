@@ -30,12 +30,15 @@ func main() {
 
 	// Repository
 	newsRepo := repository.NewNewsRepository(logConfig)
+	amrRepo := repository.NewAMRRepository(logConfig)
 
 	// Worker UseCase
 	newsFetchWorker := worker.NewNewsWorker(dbConfig, logConfig, newsRepo, envConfig.NewsAPI, envConfig.NewsCronExpr)
+	amrWorker := worker.NewAMRWorker(dbConfig, logConfig, amrRepo, envConfig.Location, envConfig.NumberBatchAMRDelete, envConfig.AMRCronExpr)
 
 	// Worker
 	go newsFetchWorker.FetchNewNews(ctx)
+	go amrWorker.RunDeletionWorker(ctx)
 
 	// channel
 	terminateSignals := make(chan os.Signal, 1)

@@ -65,13 +65,18 @@ func (c *RouteConfig) SetupUserRoute() {
 	amrRoute := userRoute.Group("/amr")
 	amrRoute.Post("/", c.AMRHandler.Upload)
 	amrRoute.Get("/", c.AMRHandler.List)
+	amrRoute.Get("/template", c.AMRHandler.DownloadTemplate)
 	amrRoute.Get("/:amr_id", c.AMRHandler.FindAMR)
+	amrRoute.Delete("/:amr_id", c.AMRHandler.Delete)
 	amrRoute.Get("/:amr_id/report", c.AMRHandler.Report)
+	amrRoute.Get("/:amr_id/summary", c.AMRHandler.Summary)
 	amrRoute.Post("/:amr_id/generate-report", c.AMRHandler.GenerateReport)
 	amrRoute.Post("/:amr_id/param-config", c.AMRHandler.CreateParamConfig)
 	amrRoute.Get("/:amr_id/param-config", c.AMRHandler.FindParamConfig)
 	amrRoute.Post("/:amr_id/weight-config", c.AMRHandler.CreateWeightConfig)
 	amrRoute.Get("/:amr_id/weight-config", c.AMRHandler.FindWeightConfig)
+	amrRoute.Get("/:amr_id/export", c.AMRHandler.Export)
+	amrRoute.Get("/:amr_id/export-recommendation", c.AMRHandler.ExportRecommendation)
 }
 
 func (c *RouteConfig) SetupAdminRoute() {
