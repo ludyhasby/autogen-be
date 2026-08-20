@@ -17,17 +17,16 @@ type ListNews struct {
 }
 
 type NewsFetchResponse struct {
-	Status       string `json:"status"`
-	TotalResults int    `json:"totalResults"`
-	Articles     []struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
+	Status string `json:"status"`
+	Total  int    `json:"total"`
+	Data   []struct {
+		Title       string `json:"strjudul"`
+		Description string `json:"strringkasan"`
 		URL         string `json:"url"`
-		URLToImage  string `json:"urlToImage"`
-		PublishedAt string `json:"publishedAt"`
-		Source      struct {
-			ID   int32  `json:"id"`
-			Name string `json:"name"`
-		}
-	} `json:"articles"`
+		Image       []struct {
+			RawUrlImage string `json:"strnmfile"`
+			Extension   string `json:"extension"`
+		} `json:"image"`
+		NewsDate string `json:"dtnewsdate"`
+	} `json:"data"`
 }
