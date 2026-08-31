@@ -40,3 +40,12 @@ type FindUserResp struct {
 	UP3       string `json:"up3"`
 	UnitInduk string `json:"unit_induk"`
 }
+type ForgotPasswordResp struct {
+	Email string `json:"email"`
+}
+type ForgotPasswordMail struct {
+	Email        string
+	Name         string
+	ExpiredAtStr string
+	URL          string
+}

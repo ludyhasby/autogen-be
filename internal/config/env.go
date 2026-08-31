@@ -8,11 +8,12 @@ import (
 )
 
 type Env struct {
-	AppName  string
-	PreFork  bool
-	LogLevel string
-	WebPort  int
-	Location *time.Location
+	AppName     string
+	PreFork     bool
+	LogLevel    string
+	WebPort     int
+	Location    *time.Location
+	FrontEndURL string
 
 	DBMigrate  bool
 	DBUser     string
@@ -42,6 +43,12 @@ type Env struct {
 
 	NumberBatchAMRDelete int
 	AMRCronExpr          string
+
+	EmailAddress string
+	DialHost     string
+	DialPassword string
+	DialUser     string
+	DialPort     int
 }
 
 func NewEnv(viper *viper.Viper) *Env {
@@ -51,11 +58,12 @@ func NewEnv(viper *viper.Viper) *Env {
 		loc = l
 	}
 	return &Env{
-		AppName:  viper.GetString("APP_NAME"),
-		PreFork:  viper.GetBool("PRE_FORK"),
-		LogLevel: viper.GetString("LOG_LEVEL"),
-		WebPort:  viper.GetInt("WEB_PORT"),
-		Location: loc,
+		AppName:     viper.GetString("APP_NAME"),
+		PreFork:     viper.GetBool("PRE_FORK"),
+		LogLevel:    viper.GetString("LOG_LEVEL"),
+		WebPort:     viper.GetInt("WEB_PORT"),
+		Location:    loc,
+		FrontEndURL: viper.GetString("FRONT_END_URL"),
 
 		DBMigrate:  viper.GetBool("DB_MIGRATE"),
 		DBUser:     viper.GetString("DB_USER"),
@@ -84,5 +92,11 @@ func NewEnv(viper *viper.Viper) *Env {
 
 		NumberBatchAMRDelete: viper.GetInt("NUMBER_BATCH_AMR_DELETE"),
 		AMRCronExpr:          viper.GetString("AMR_CRON_EXPR"),
+
+		EmailAddress: viper.GetString("EMAIL_ADDRESS"),
+		DialHost:     viper.GetString("DIAL_HOST"),
+		DialPassword: viper.GetString("DIAL_PASSWORD"),
+		DialUser:     viper.GetString("DIAL_USER"),
+		DialPort:     viper.GetInt("DIAL_PORT"),
 	}
 }

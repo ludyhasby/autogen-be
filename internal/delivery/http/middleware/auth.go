@@ -4,8 +4,10 @@ import (
 	"errors"
 	coreenum "logisfy/core/enum"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -103,5 +105,21 @@ func validateToken(authHeader, secretKey string) (*jwt.Token, error) {
 		}
 
 		return []byte(secretKey), nil
+	})
+}
+
+func RateLimiterResetPassword() fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        3,
+		Expiration: 15 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"success": false,
+				"message": "Terlalu banyak permintaan reset password. Silakan coba lagi setelah 15 menit.",
+			})
+		},
 	})
 }

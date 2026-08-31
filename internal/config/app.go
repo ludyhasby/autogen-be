@@ -7,6 +7,7 @@ import (
 	internaldeliveryhttproute "logisfy/internal/delivery/http/route"
 	"logisfy/internal/repository"
 	"logisfy/internal/usecase"
+	"logisfy/internal/worker"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -41,9 +42,13 @@ func Bootstrap(config *BootstrapConfig) {
 	amrWeightRepo := repository.NewAMRWeightConfigRepository(config.Log)
 	amrDetailResultRepo := repository.NewAMRDetailResultRepository(config.Log)
 	newsRepo := repository.NewNewsRepository(config.Log)
+	passwordResetToken := repository.NewPasswordResetTokenRepository(config.Log)
+
+	// setup worker
+	mailWorker := worker.NewMailWorker(config.DB, config.Log, config.Env.Location, config.Env.EmailAddress, config.Env.DialHost, config.Env.DialPassword, config.Env.DialUser, config.Env.DialPort)
 
 	// setup useCase
-	authUseCase := usecase.NewAuthUseCase(config.DB, config.Log, config.Validate, config.Env.SecretKey, userRepo)
+	authUseCase := usecase.NewAuthUseCase(config.DB, config.Log, config.Validate, config.Env.SecretKey, config.Env.Location, config.Env.FrontEndURL, mailWorker, userRepo, passwordResetToken)
 	amrUseCase := usecase.NewAMRUseCase(config.DB, config.Log, config.Validate, aesGcm, config.Env.Location, config.Env.NumberBatch, config.Env.DeletedDurationInHour, amrRepo, amrDetailRepo, amrConfigRepo, amrWeightRepo, amrDetailResultRepo, config.Env.MaxConcurrentUploads, config.Env.UploadTempDir)
 	newsUseCase := usecase.NewNewsUseCase(config.DB, config.Log, config.Validate, newsRepo)
 

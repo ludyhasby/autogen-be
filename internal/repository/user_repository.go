@@ -29,7 +29,7 @@ func NewUserRepository(
 	}
 }
 
-func (r *UserRepository) FindByEmail(tx *gorm.DB, email string) (result *entity.UserEntity, errRes error) {
+func (r *UserRepository) FindByEmail(tx *gorm.DB, email string) (result entity.UserEntity, errRes error) {
 
 	ctx := tx.Statement.Context
 

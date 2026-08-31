@@ -52,6 +52,7 @@ func (c *RouteConfig) SetupGuestRoute() {
 	authRoute := publicRoute.Group("/auth")
 	authRoute.Post("/register", c.AuthHandler.Register)
 	authRoute.Post("/login", c.AuthHandler.Login)
+	authRoute.Post("/forgot-password", middleware.RateLimiterResetPassword(), c.AuthHandler.ForgotPassword)
 
 	// News
 	newsRoute := publicRoute.Group("/news")

@@ -26,3 +26,6 @@ type UserDeActivationReq struct {
 type DeleteUserReq struct {
 	UserID string `validate:"required" json:"-" msg:"user id tidak valid"`
 }
+type ForgotPasswordReq struct {
+	Email string `json:"email" validate:"required,email" msg:"format email salah"`
+}

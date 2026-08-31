@@ -11,6 +11,7 @@ import (
 	modelrequest "logisfy/internal/model/request"
 	modelresponse "logisfy/internal/model/response"
 	"logisfy/internal/repository"
+	"logisfy/internal/worker"
 	"strconv"
 	"time"
 
@@ -20,11 +21,15 @@ import (
 )
 
 type AuthUseCase struct {
-	DB             *gorm.DB
-	Log            *slog.Logger
-	SecretKeyStr   string
-	Validate       *validator.Validate
-	UserRepository *repository.UserRepository
+	DB                           *gorm.DB
+	Log                          *slog.Logger
+	SecretKeyStr                 string
+	Validate                     *validator.Validate
+	Location                     *time.Location
+	FrontEndURL                  string
+	MailWorker                   *worker.MailWorker
+	UserRepository               *repository.UserRepository
+	PasswordResetTokenRepository *repository.PasswordResetTokenRepository
 }
 
 func NewAuthUseCase(
@@ -32,14 +37,22 @@ func NewAuthUseCase(
 	log *slog.Logger,
 	validate *validator.Validate,
 	secretKeyStr string,
+	location *time.Location,
+	frontEndURL string,
+	mailWorker *worker.MailWorker,
 	userRepository *repository.UserRepository,
+	passwordResetTokenRepository *repository.PasswordResetTokenRepository,
 ) *AuthUseCase {
 	return &AuthUseCase{
-		DB:             db,
-		Log:            log,
-		SecretKeyStr:   secretKeyStr,
-		Validate:       validate,
-		UserRepository: userRepository,
+		DB:                           db,
+		Log:                          log,
+		SecretKeyStr:                 secretKeyStr,
+		Location:                     location,
+		FrontEndURL:                  frontEndURL,
+		Validate:                     validate,
+		MailWorker:                   mailWorker,
+		UserRepository:               userRepository,
+		PasswordResetTokenRepository: passwordResetTokenRepository,
 	}
 }
 
@@ -80,7 +93,7 @@ func (u *AuthUseCase) Register(ctx context.Context, req *modelrequest.RegisterUs
 	tx = tx.Begin()
 
 	// create user
-	entityUser := (entity.UserEntity{}).Create(req, coreenum.CTXEnumRoleUser)
+	entityUser := (&entity.UserEntity{}).Create(req, coreenum.CTXEnumRoleUser)
 	// exec repo
 	err = u.UserRepository.Create(tx, entityUser)
 	if err != nil {
@@ -162,7 +175,7 @@ func (u *AuthUseCase) Login(ctx context.Context, req *modelrequest.AuthUserReq) 
 	// Update Last Login
 	timeNow := time.Now()
 	entityUser.LastLoginAt = &timeNow
-	err = u.UserRepository.Update(tx, entityUser)
+	err = u.UserRepository.Update(tx, &entityUser)
 	if err != nil {
 		u.Log.Info("AuthUseCase.LoginUser()", "UserRepository.Update()", "Err", err.Error())
 		exc = helperexception.Internal("gagal saat proses login", err)
@@ -375,5 +388,79 @@ func (u *AuthUseCase) Find(ctx context.Context) (resp modelresponse.FindUserResp
 	resp.Email = entityUser.Email
 	resp.UP3 = entityUser.UP3
 	resp.UnitInduk = entityUser.UnitInduk
+	return
+}
+
+func (u *AuthUseCase) ForgotPassword(ctx context.Context, req *modelrequest.ForgotPasswordReq) (resp modelresponse.ForgotPasswordResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "ForgotPassword()")
+	defer span.End()
+
+	var err error
+	if err = u.Validate.Struct(req); err != nil {
+		u.Log.Info("AuthUseCase.ForgotPassword()", "Validate.Struct()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+	resp.Email = req.Email
+
+	tx := u.DB.WithContext(ctx)
+	entityUser, err := u.UserRepository.FindByEmail(tx, req.Email)
+	if err != nil {
+		u.Log.Info("AuthUseCase.ForgotPassword()", "UserRepository.FindByEmail()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses forgot password", err)
+		return
+	}
+	if !entityUser.CheckFound() {
+		return
+	}
+
+	tx = tx.Begin()
+	defer func() {
+		if exc != nil || err != nil {
+			tx.Rollback()
+		}
+	}()
+	if err = u.PasswordResetTokenRepository.UpdatePasswordResetTokenByUserID(tx, entityUser.UserID, false); err != nil {
+		u.Log.Info("AuthUseCase.ForgotPassword()", "PasswordResetTokenRepository.UpdatePasswordResetTokenByUserID()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat menonaktifkan token reset password sebelumnya", err)
+		return
+	}
+
+	passwordResetTokenEntity := (&entity.PasswordResetTokenEntity{}).Create(req, entityUser.UserID, true)
+	if err = u.PasswordResetTokenRepository.Create(tx, passwordResetTokenEntity); err != nil {
+		u.Log.Info("AuthUseCase.ForgotPassword()", "PasswordResetTokenRepository.Create()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat membuat token reset password", err)
+		return
+	}
+
+	expiredStr := passwordResetTokenEntity.ExpiresAt.In(u.Location).Format("02 Jan 2006, 15:04 WIB")
+	forgotPassword := modelresponse.ForgotPasswordMail{
+		Email:        entityUser.Email,
+		Name:         entityUser.Name,
+		ExpiredAtStr: expiredStr,
+		URL:          u.FrontEndURL + "/reset-password?session-key=" + passwordResetTokenEntity.SessionKey,
+	}
+
+	if err = tx.Commit().Error; err != nil {
+		u.Log.Error("AuthUseCase.ForgotPassword()", "tx.Commit()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk membuat token reset password", err)
+		return
+	}
+
+	bgCtx := context.WithoutCancel(ctx)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				u.Log.Error("AuthUseCase.ForgotPassword(): panic recovered in mail worker goroutine", "panic", r)
+			}
+		}()
+		for i := 0; i < 2; i++ {
+			if mailErr := u.MailWorker.ForgotPassword(bgCtx, "file/template/forgot-password.html", forgotPassword); mailErr == nil {
+				break
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
 	return
 }

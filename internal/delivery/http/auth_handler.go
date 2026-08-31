@@ -404,3 +404,64 @@ func (handler *AuthHandler) Find(fiberCtx *fiber.Ctx) error {
 		Data:    &response,
 	})
 }
+
+// ForgotPassword
+//
+// @Summary		Forgot Password
+// @Description	Forgot Password
+// @Tags		Auth
+// @Accept		json
+// @Produce		json
+// @Param		data	body		modelrequest.ForgotPasswordReq			true					"Forgot Password Request Parameter"
+// @Success		200		{object}	coreresponse.ApiResponse[modelresponse.ForgotPasswordResp]		"Result"
+// @Failure		400		{object}	coreresponse.ApiResponse[modelresponse.ForgotPasswordResp]		"Result"
+// @Router		/public/auth/forgot-password [post]
+func (handler *AuthHandler) ForgotPassword(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AuthHandler")
+	ctx, span := tr.Start(ctx, "ForgotPassword()")
+	defer span.End()
+
+	// get form data
+	requestData := &modelrequest.ForgotPasswordReq{}
+	if err := fiberCtx.BodyParser(requestData); err != nil {
+		errString := err.Error()
+		handler.Log.Info("AuthHandler.ForgotPassword()", "fiberCtx.BodyParser()", "Info", err)
+		return fiberCtx.Status(fiber.StatusBadRequest).JSON(coreresponse.ApiResponse[modelresponse.ForgotPasswordResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  fiber.StatusBadRequest,
+			Error:   &errString,
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	// Exec UseCase
+	response, exc := handler.UseCase.ForgotPassword(ctx, requestData)
+	if exc != nil {
+		handler.Log.Info("AuthHandler.ForgotPassword()", "UseCase.ForgotPassword()", "Info", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.ForgotPasswordResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	return fiberCtx.Status(fiber.StatusOK).JSON(coreresponse.ApiResponse[modelresponse.ForgotPasswordResp]{
+		Tin:     timeIn,
+		Tout:    time.Now(),
+		Success: true,
+		Status:  fiber.StatusOK,
+		Error:   nil,
+		Latency: helpergenerator.GetLatency(timeIn),
+		Data:    &response,
+	})
+}

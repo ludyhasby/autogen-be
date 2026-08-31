@@ -21,6 +21,7 @@ func AutoMigrate(DB *gorm.DB) {
 		&entity.AMRDetailEntity{},
 		&entity.AMRDetailResultEntity{},
 		&entity.NewsEntity{},
+		&entity.PasswordResetTokenEntity{},
 	)
 	if err != nil {
 		slog.Error("Error migrate database", err)
