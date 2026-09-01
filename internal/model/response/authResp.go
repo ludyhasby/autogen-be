@@ -49,3 +49,9 @@ type ForgotPasswordMail struct {
 	ExpiredAtStr string
 	URL          string
 }
+type FindResetPasswordTokenResp struct {
+	Token string `json:"token"`
+}
+type ResetPasswordResp struct {
+	Token string `json:"token"`
+}

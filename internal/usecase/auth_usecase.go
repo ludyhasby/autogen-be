@@ -421,13 +421,13 @@ func (u *AuthUseCase) ForgotPassword(ctx context.Context, req *modelrequest.Forg
 			tx.Rollback()
 		}
 	}()
-	if err = u.PasswordResetTokenRepository.UpdatePasswordResetTokenByUserID(tx, entityUser.UserID, false); err != nil {
+	if err = u.PasswordResetTokenRepository.UpdatePasswordResetTokenByUserID(tx, entityUser.UserID, entity.PasswordResetTokenDeActive); err != nil {
 		u.Log.Info("AuthUseCase.ForgotPassword()", "PasswordResetTokenRepository.UpdatePasswordResetTokenByUserID()", "Err", err.Error())
 		exc = helperexception.Internal("gagal saat menonaktifkan token reset password sebelumnya", err)
 		return
 	}
 
-	passwordResetTokenEntity := (&entity.PasswordResetTokenEntity{}).Create(req, entityUser.UserID, true)
+	passwordResetTokenEntity := (&entity.PasswordResetTokenEntity{}).Create(req, entityUser.UserID, entity.PasswordResetTokenActive)
 	if err = u.PasswordResetTokenRepository.Create(tx, passwordResetTokenEntity); err != nil {
 		u.Log.Info("AuthUseCase.ForgotPassword()", "PasswordResetTokenRepository.Create()", "Err", err.Error())
 		exc = helperexception.Internal("gagal saat membuat token reset password", err)
@@ -462,5 +462,119 @@ func (u *AuthUseCase) ForgotPassword(ctx context.Context, req *modelrequest.Forg
 			time.Sleep(2 * time.Second)
 		}
 	}()
+	return
+}
+
+func (u *AuthUseCase) FindResetPasswordToken(ctx context.Context, req *modelrequest.FindResetPasswordTokenReq) (resp modelresponse.FindResetPasswordTokenResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "FindResetPasswordToken()")
+	defer span.End()
+
+	var err error
+	if err = u.Validate.Struct(req); err != nil {
+		u.Log.Info("AuthUseCase.FindResetPasswordToken()", "Validate.Struct()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+	resetPasswordEntity, err := u.PasswordResetTokenRepository.FindBySessionKey(tx, req.SessionKey)
+	if err != nil {
+		u.Log.Error("AuthUseCase.FindResetPasswordToken()", "PasswordResetTokenRepository.FindBySessionKey()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari token reset password", err)
+		return
+	}
+	if !resetPasswordEntity.CheckFound() {
+		exc = helperexception.NotFound("token tidak valid")
+		return
+	}
+	now := time.Now()
+	if resetPasswordEntity.ExpiresAt.In(u.Location).Before(now) {
+		exc = helperexception.InvalidArgument("token expired", nil)
+		return
+	}
+	if !*resetPasswordEntity.IsActive {
+		exc = helperexception.InvalidArgument("token sudah tidak aktif", nil)
+		return
+	}
+
+	resp.Token = req.SessionKey
+	return
+}
+
+func (u *AuthUseCase) ResetPassword(ctx context.Context, req *modelrequest.ResetPasswordReq) (resp modelresponse.ResetPasswordResp, exc *helperexception.Exception) {
+	tr := otel.Tracer("useCase.AuthUseCase")
+	ctx, span := tr.Start(ctx, "ResetPassword()")
+	defer span.End()
+
+	var err error
+	if err = u.Validate.Struct(req); err != nil {
+		u.Log.Info("AuthUseCase.ResetPassword()", "Validate.Struct()", "error", err.Error())
+		exc = helperexception.InvalidArgument(err, req)
+		return
+	}
+
+	tx := u.DB.WithContext(ctx)
+	resetPasswordEntity, err := u.PasswordResetTokenRepository.FindBySessionKey(tx, req.SessionKey)
+	if err != nil {
+		u.Log.Error("AuthUseCase.ResetPassword()", "PasswordResetTokenRepository.FindBySessionKey()", "error", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari token reset password", err)
+		return
+	}
+	if !resetPasswordEntity.CheckFound() {
+		exc = helperexception.NotFound("token tidak valid")
+		return
+	}
+	now := time.Now()
+	if resetPasswordEntity.ExpiresAt.In(u.Location).Before(now) {
+		exc = helperexception.InvalidArgument("token expired", nil)
+		return
+	}
+	if resetPasswordEntity.IsActive == nil || !*resetPasswordEntity.IsActive {
+		exc = helperexception.InvalidArgument("token sudah tidak aktif", nil)
+		return
+	}
+
+	entityUser, err := u.UserRepository.FindByUserID(tx, resetPasswordEntity.UserID)
+	if err != nil {
+		u.Log.Info("AuthUseCase.ResetPassword()", "UserRepository.FindByUserID()", "Err", err.Error())
+		exc = helperexception.Internal("gagal saat proses reset password", err)
+		return
+	}
+	if !entityUser.CheckFound() {
+		exc = helperexception.NotFound("user tidak ditemukan")
+		return
+	}
+	newPasswordHashed := helperhash.HashPassword(req.NewPassword)
+	if entityUser.Password == newPasswordHashed {
+		exc = helperexception.InvalidArgument("password baru tidak boleh sama dengan password lama", nil)
+		return
+	}
+
+	entityUser.Password = newPasswordHashed
+
+	tx = tx.Begin()
+	defer func() {
+		if exc != nil || err != nil {
+			tx.Rollback()
+		}
+	}()
+	if err = u.PasswordResetTokenRepository.UpdatePasswordResetTokenByUserID(tx, entityUser.UserID, entity.PasswordResetTokenDeActive); err != nil {
+		u.Log.Error("AuthUseCase.ResetPassword()", "PasswordResetTokenRepository.UpdatePasswordResetTokenByUserID()", "error", err.Error())
+		exc = helperexception.Internal("gagal saat proses reset password", err)
+		return
+	}
+	if err = u.UserRepository.Update(tx, entityUser); err != nil {
+		u.Log.Error("AuthUseCase.ResetPassword()", "UserRepository.Update()", "error", err.Error())
+		exc = helperexception.Internal("gagal saat proses reset password", err)
+		return
+	}
+	if err = tx.Commit().Error; err != nil {
+		u.Log.Error("AuthUseCase.ResetPassword()", "tx.Commit()", "error", err.Error())
+		exc = helperexception.Internal("gagal saat proses reset password", err)
+		return
+	}
+
+	resp.Token = req.SessionKey
 	return
 }

@@ -17,6 +17,11 @@ type PasswordResetTokenEntity struct {
 	CreatedAt            time.Time `gorm:"autoCreateTime;not null"`
 }
 
+const (
+	PasswordResetTokenActive   = true
+	PasswordResetTokenDeActive = false
+)
+
 func (t PasswordResetTokenEntity) TableName() string {
 	return "password_reset_token"
 }

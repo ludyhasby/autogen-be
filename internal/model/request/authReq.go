@@ -29,3 +29,10 @@ type DeleteUserReq struct {
 type ForgotPasswordReq struct {
 	Email string `json:"email" validate:"required,email" msg:"format email salah"`
 }
+type FindResetPasswordTokenReq struct {
+	SessionKey string `json:"session_key" validate:"required" msg:"token tidak ditemukan"`
+}
+type ResetPasswordReq struct {
+	SessionKey  string `json:"session_key" validate:"required" msg:"token tidak ditemukan"`
+	NewPassword string `json:"new_password" validate:"required,min=8" msg:"password minimal 8 karakter, berisi 1 huruf kapital, dan 1 angka"`
+}

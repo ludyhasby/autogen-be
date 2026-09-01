@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"log/slog"
 	"logisfy/internal/entity"
 
@@ -53,4 +54,21 @@ func (r *PasswordResetTokenRepository) UpdatePasswordResetTokenByUserID(
 		return err
 	}
 	return nil
+}
+
+func (r *PasswordResetTokenRepository) FindBySessionKey(tx *gorm.DB, sessionKey string) (result *entity.PasswordResetTokenEntity, err error) {
+	ctx := tx.Statement.Context
+
+	tr := otel.Tracer("repository.PasswordResetTokenRepository")
+	ctx, span := tr.Start(ctx, "FindBySessionKey")
+	defer span.End()
+
+	if err = tx.Where("session_key = ?", sessionKey).First(&result).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return result, nil
+		}
+		r.Log.Error("failed to find password reset token", "method", "PasswordResetTokenRepository.FindBySessionKey()", "error", err.Error())
+		return
+	}
+	return
 }

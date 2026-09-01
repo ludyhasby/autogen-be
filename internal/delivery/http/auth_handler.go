@@ -465,3 +465,124 @@ func (handler *AuthHandler) ForgotPassword(fiberCtx *fiber.Ctx) error {
 		Data:    &response,
 	})
 }
+
+// FindResetPasswordToken
+//
+// @Summary		Find Reset Password Token
+// @Description	Find Reset Password Token
+// @Tags		Auth
+// @Accept		json
+// @Produce		json
+// @Param		data	body		modelrequest.FindResetPasswordTokenReq			true					"Find Reset Password Token Request Parameter"
+// @Success		200		{object}	coreresponse.ApiResponse[modelresponse.FindResetPasswordTokenResp]		"Result"
+// @Failure		400		{object}	coreresponse.ApiResponse[modelresponse.FindResetPasswordTokenResp]		"Result"
+// @Router		/public/auth/check-reset-password-token [post]
+func (handler *AuthHandler) FindResetPasswordToken(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AuthHandler")
+	ctx, span := tr.Start(ctx, "FindResetPasswordToken()")
+	defer span.End()
+
+	// get form data
+	requestData := &modelrequest.FindResetPasswordTokenReq{}
+	if err := fiberCtx.BodyParser(requestData); err != nil {
+		errString := err.Error()
+		handler.Log.Info("AuthHandler.FindResetPasswordToken()", "fiberCtx.BodyParser()", "Info", err)
+		return fiberCtx.Status(fiber.StatusBadRequest).JSON(coreresponse.ApiResponse[modelresponse.FindResetPasswordTokenResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  fiber.StatusBadRequest,
+			Error:   &errString,
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	// Exec UseCase
+	response, exc := handler.UseCase.FindResetPasswordToken(ctx, requestData)
+	if exc != nil {
+		handler.Log.Info("AuthHandler.FindResetPasswordToken()", "UseCase.FindResetPasswordToken()", "Info", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.FindResetPasswordTokenResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	return fiberCtx.Status(fiber.StatusOK).JSON(coreresponse.ApiResponse[modelresponse.FindResetPasswordTokenResp]{
+		Tin:     timeIn,
+		Tout:    time.Now(),
+		Success: true,
+		Status:  fiber.StatusOK,
+		Error:   nil,
+		Latency: helpergenerator.GetLatency(timeIn),
+		Data:    &response,
+	})
+}
+
+// ResetPassword
+//
+// @Summary		Reset Password
+// @Description	Reset Password
+// @Tags		Auth
+// @Accept		json
+// @Produce		json
+// @Param		data	body		modelrequest.ResetPasswordReq			true					"Reset Password Request Parameter"
+// @Success		200		{object}	coreresponse.ApiResponse[modelresponse.ResetPasswordResp]		"Result"
+// @Failure		400		{object}	coreresponse.ApiResponse[modelresponse.ResetPasswordResp]		"Result"
+// @Router		/public/auth/reset-password [post]
+func (handler *AuthHandler) ResetPassword(fiberCtx *fiber.Ctx) error {
+	var timeIn = time.Now()
+	ctx := helpergenerator.DefaultContextGenerator(fiberCtx)
+
+	tr := otel.Tracer("handler.AuthHandler")
+	ctx, span := tr.Start(ctx, "ResetPassword()")
+	defer span.End()
+
+	// get form data
+	requestData := &modelrequest.ResetPasswordReq{}
+	if err := fiberCtx.BodyParser(requestData); err != nil {
+		errString := err.Error()
+		handler.Log.Info("AuthHandler.ResetPassword()", "fiberCtx.BodyParser()", "Info", err)
+		return fiberCtx.Status(fiber.StatusBadRequest).JSON(coreresponse.ApiResponse[modelresponse.ResetPasswordResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  fiber.StatusBadRequest,
+			Error:   &errString,
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	response, exc := handler.UseCase.ResetPassword(ctx, requestData)
+	if exc != nil {
+		handler.Log.Info("AuthHandler.ResetPassword()", "UseCase.ResetPassword()", "Info", exc.Error())
+		return fiberCtx.Status(exc.GetHttpCode()).JSON(coreresponse.ApiResponse[modelresponse.ResetPasswordResp]{
+			Tin:     timeIn,
+			Tout:    time.Now(),
+			Success: false,
+			Status:  exc.GetHttpCode(),
+			Error:   exc.GetError(),
+			Latency: helpergenerator.GetLatency(timeIn),
+			Data:    nil,
+		})
+	}
+
+	return fiberCtx.Status(fiber.StatusOK).JSON(coreresponse.ApiResponse[modelresponse.ResetPasswordResp]{
+		Tin:     timeIn,
+		Tout:    time.Now(),
+		Success: true,
+		Status:  fiber.StatusOK,
+		Error:   nil,
+		Latency: helpergenerator.GetLatency(timeIn),
+		Data:    &response,
+	})
+}
