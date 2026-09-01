@@ -1053,7 +1053,18 @@ func (u *AMRUseCase) Report(ctx context.Context, req *modelrequest.ListReportAMR
 		return
 	}
 
-	entityReport, items, totalPages, size, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), req.QueryInfo)
+	paramConfigEntity, err := u.AMRConfigRepository.FindByAMRID(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Report()", "AMRConfigRepository.FindByAMRID()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data konfigurasi parameter AMR", err)
+		return
+	}
+	if !paramConfigEntity.CheckFound() {
+		exc = helperexception.NotFound("data konfigurasi parameter AMR tidak ditemukan")
+		return
+	}
+
+	entityReport, items, totalPages, size, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), paramConfigEntity.MinWeight, req.QueryInfo)
 	if err != nil {
 		u.Log.Warn("AMRUseCase.Report()", "AMRDetailResultRepository.Report()", "warn", err.Error())
 		exc = helperexception.Internal("gagal saat proses list detail amr", err)
@@ -1116,6 +1127,7 @@ func (u *AMRUseCase) FindAMR(ctx context.Context, req *modelrequest.FindAMRReq) 
 	resp.StageProcess = amrEntity.StageProcess
 	resp.CreatedAt = createdAtStr
 	resp.AutoDeletedAt = autoDeletedAt
+	resp.FailedReason = amrEntity.FailedReason
 	return
 }
 
@@ -1427,6 +1439,17 @@ func (u *AMRUseCase) Export(ctx context.Context, req *modelrequest.ExportAMRReq)
 		return
 	}
 
+	paramConfigEntity, err := u.AMRConfigRepository.FindByAMRID(tx, uint64(amrID))
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export()", "AMRConfigRepository.FindByAMRID()", "warn", err.Error())
+		exc = helperexception.Internal("gagal untuk mencari data konfigurasi parameter AMR", err)
+		return
+	}
+	if !paramConfigEntity.CheckFound() {
+		exc = helperexception.NotFound("data konfigurasi parameter AMR tidak ditemukan")
+		return
+	}
+
 	fileExcel := excelize.NewFile()
 	defer func() {
 		if err := fileExcel.Close(); err != nil {
@@ -1513,94 +1536,94 @@ func (u *AMRUseCase) Export(ctx context.Context, req *modelrequest.ExportAMRReq)
 	rowOffset := 3
 	batchSize := int32(u.NumberBatch)
 
-	for {
-		req.QueryInfo.SelectParameter.PageDescriptor.PageIndex = page
-		req.QueryInfo.SelectParameter.PageDescriptor.PageSize = batchSize
+	//for {
+	//	if page >= totalPages {
+	//		break
+	//	}
+	//	rowOffset += len(reportEntities)
+	//	page++
+	//}
 
-		reportEntities, _, totalPages, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), req.QueryInfo)
+	req.QueryInfo.SelectParameter.PageDescriptor.PageIndex = page
+	req.QueryInfo.SelectParameter.PageDescriptor.PageSize = batchSize
+
+	reportEntities, _, _, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), paramConfigEntity.MinWeight, req.QueryInfo)
+	if err != nil {
+		u.Log.Warn("AMRUseCase.Export() failed listing report entities", "method", "AMRDetailResultRepository.Report()", "page", page, "error", err.Error())
+		exc = helperexception.Internal("gagal saat proses list detail amr", err)
+		return
+	}
+
+	//if len(reportEntities) == 0 {
+	//	break
+	//}
+
+	for i, entity := range reportEntities {
+		locationCodeDecrypt, err := u.Crypto.Decrypt(entity.LocationCodeEncrypt)
 		if err != nil {
-			u.Log.Warn("AMRUseCase.Export() failed listing report entities", "method", "AMRDetailResultRepository.Report()", "page", page, "error", err.Error())
-			exc = helperexception.Internal("gagal saat proses list detail amr", err)
+			u.Log.Error("AMRUseCase.Export() failed decrypting location code", "method", "Crypto.Decrypt()", "error", err.Error())
+			exc = helperexception.Internal("gagal mendeskripsi location code", err)
 			return
 		}
+		readDateStr := helperconverter.ConvertTimeToString(&entity.ReadDate)
 
-		if len(reportEntities) == 0 {
-			break
+		rowVals := []interface{}{
+			locationCodeDecrypt,
+			entity.TypeMeter,
+			entity.Tariff,
+			entity.Power,
+			entity.LocationType.String(),
+			readDateStr,
+			entity.VoltageL1,
+			entity.VoltageL2,
+			entity.VoltageL3,
+			entity.VoltageType.String(),
+			entity.CurrentL1,
+			entity.CurrentL2,
+			entity.CurrentL3,
+			entity.CurrentN,
+			entity.VoltageAngleL1,
+			entity.VoltageAngleL2,
+			entity.VoltageAngleL3,
+			entity.CurrentAngleL1,
+			entity.CurrentAngleL2,
+			entity.CurrentAngleL3,
+			entity.PowerFactorL1,
+			entity.PowerFactorL2,
+			entity.PowerFactorL3,
+			entity.ActivePowerL1,
+			entity.ActivePowerL2,
+			entity.ActivePowerL3,
+			entity.ApparentPowerL1,
+			entity.ApparentPowerL2,
+			entity.ApparentPowerL3,
+			entity.KWHAbsTotal,
+			entity.BillReffKwh,
+			entity.Phase,
+			entity.MeasurementType.String(),
+			entity.VDrop,
+			entity.VLoss,
+			entity.CosPhiKecil,
+			entity.ILoss,
+			entity.InGreaterIMax,
+			entity.OverI,
+			entity.OverV,
+			entity.ReversePower,
+			entity.UnbalanceI,
+			entity.ILowVLow,
+			entity.CurrentLoop,
+			entity.ActivePLoss,
+			entity.Freeze,
+			entity.TotalWeightedValue,
 		}
 
-		for i, entity := range reportEntities {
-			locationCodeDecrypt, err := u.Crypto.Decrypt(entity.LocationCodeEncrypt)
-			if err != nil {
-				u.Log.Error("AMRUseCase.Export() failed decrypting location code", "method", "Crypto.Decrypt()", "error", err.Error())
-				exc = helperexception.Internal("gagal mendeskripsi location code", err)
-				return
-			}
-			readDateStr := helperconverter.ConvertTimeToString(&entity.ReadDate)
-
-			rowVals := []interface{}{
-				locationCodeDecrypt,
-				entity.TypeMeter,
-				entity.Tariff,
-				entity.Power,
-				entity.LocationType.String(),
-				readDateStr,
-				entity.VoltageL1,
-				entity.VoltageL2,
-				entity.VoltageL3,
-				entity.VoltageType.String(),
-				entity.CurrentL1,
-				entity.CurrentL2,
-				entity.CurrentL3,
-				entity.CurrentN,
-				entity.VoltageAngleL1,
-				entity.VoltageAngleL2,
-				entity.VoltageAngleL3,
-				entity.CurrentAngleL1,
-				entity.CurrentAngleL2,
-				entity.CurrentAngleL3,
-				entity.PowerFactorL1,
-				entity.PowerFactorL2,
-				entity.PowerFactorL3,
-				entity.ActivePowerL1,
-				entity.ActivePowerL2,
-				entity.ActivePowerL3,
-				entity.ApparentPowerL1,
-				entity.ApparentPowerL2,
-				entity.ApparentPowerL3,
-				entity.KWHAbsTotal,
-				entity.BillReffKwh,
-				entity.Phase,
-				entity.MeasurementType.String(),
-				entity.VDrop,
-				entity.VLoss,
-				entity.CosPhiKecil,
-				entity.ILoss,
-				entity.InGreaterIMax,
-				entity.OverI,
-				entity.OverV,
-				entity.ReversePower,
-				entity.UnbalanceI,
-				entity.ILowVLow,
-				entity.CurrentLoop,
-				entity.ActivePLoss,
-				entity.Freeze,
-				entity.TotalWeightedValue,
-			}
-
-			currentRow := rowOffset + int(i)
-			err = fileExcel.SetSheetRow(detailSheetName, "A"+strconv.Itoa(currentRow), &rowVals)
-			if err != nil {
-				u.Log.Error("AMRUseCase.Export()", "method", "fileExcel.SetSheetRow()", "row", currentRow, "error", err.Error())
-				exc = helperexception.Internal("gagal menulis data ke sheet", err)
-				return
-			}
+		currentRow := rowOffset + int(i)
+		err = fileExcel.SetSheetRow(detailSheetName, "A"+strconv.Itoa(currentRow), &rowVals)
+		if err != nil {
+			u.Log.Error("AMRUseCase.Export()", "method", "fileExcel.SetSheetRow()", "row", currentRow, "error", err.Error())
+			exc = helperexception.Internal("gagal menulis data ke sheet", err)
+			return
 		}
-
-		if page >= totalPages {
-			break
-		}
-		rowOffset += len(reportEntities)
-		page++
 	}
 
 	buffer, err := fileExcel.WriteToBuffer()
@@ -1758,7 +1781,7 @@ func (u *AMRUseCase) ExportRecommendation(ctx context.Context, req *modelrequest
 	req.QueryInfo.SelectParameter.PageDescriptor.PageSize = int32(paramConfigEntity.NShowRecommendation)
 	rowOffset := 3
 
-	reportEntities, _, _, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), req.QueryInfo)
+	reportEntities, _, _, _, err := u.AMRDetailResultRepository.Report(tx, uint64(amrID), paramConfigEntity.MinWeight, req.QueryInfo)
 	if err != nil {
 		u.Log.Warn("AMRUseCase.ExportRecommendation()", "method", "AMRDetailResultRepository.Report()", "error", err.Error())
 		exc = helperexception.Internal("gagal saat proses list detail amr", err)
