@@ -230,8 +230,27 @@ func (u *AuthUseCase) Activation(ctx context.Context, req *modelrequest.UserActi
 		return
 	}
 
-	// response
 	resp.UserID = entityUser.UserID
+
+	userActivationMail := modelresponse.UserActivationMail{
+		Email: entityUser.Email,
+		Name:  entityUser.Name,
+		URL:   u.FrontEndURL,
+	}
+	bgCtx := context.WithoutCancel(ctx)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				u.Log.Error("AuthUseCase.Activation(): panic recovered in mail worker goroutine", "panic", r)
+			}
+		}()
+		for i := 0; i < 2; i++ {
+			if mailErr := u.MailWorker.Activation(bgCtx, "file/template/user-activation.html", userActivationMail); mailErr == nil {
+				break
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
 	return
 }
 
@@ -545,12 +564,11 @@ func (u *AuthUseCase) ResetPassword(ctx context.Context, req *modelrequest.Reset
 		exc = helperexception.NotFound("user tidak ditemukan")
 		return
 	}
-	newPasswordHashed := helperhash.HashPassword(req.NewPassword)
-	if entityUser.Password == newPasswordHashed {
+	if helperhash.ComparePass(entityUser.Password, req.NewPassword) {
 		exc = helperexception.InvalidArgument("password baru tidak boleh sama dengan password lama", nil)
 		return
 	}
-
+	newPasswordHashed := helperhash.HashPassword(req.NewPassword)
 	entityUser.Password = newPasswordHashed
 
 	tx = tx.Begin()

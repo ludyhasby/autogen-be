@@ -71,7 +71,7 @@ func (worker *MailWorker) ForgotPassword(ctx context.Context, templatePath strin
 
 	// send with gomail
 	m := gomail.NewMessage()
-	m.SetHeader("From", worker.EmailAddress)
+	m.SetHeader("From", worker.EmailAddress, "Autogen PLN")
 	m.SetHeader("To", forgotPasswordMail.Email)
 	m.SetHeader("Subject", "[NO REPLY] Reset Password Akun - Autogen PLN")
 	m.SetBody("text/html", body.String())
@@ -83,5 +83,38 @@ func (worker *MailWorker) ForgotPassword(ctx context.Context, templatePath strin
 		return err
 	}
 	worker.Log.Info("MailWorker.ForgotPassword(): email sent successfully", "to", forgotPasswordMail.Email)
+	return nil
+}
+
+func (worker *MailWorker) Activation(ctx context.Context, templatePath string, activationMail modelresponse.UserActivationMail) (err error) {
+	tr := otel.Tracer("worker.MailWorker")
+	ctx, span := tr.Start(ctx, "Activation")
+	defer span.End()
+
+	var body bytes.Buffer
+	t, err := worker.getTemplate(templatePath)
+	if err != nil {
+		return err
+	}
+	err = t.Execute(&body, activationMail)
+	if err != nil {
+		worker.Log.Error("MailWorker.Activation(): failed to execute template", "error", err)
+		return err
+	}
+
+	// send with gomail
+	m := gomail.NewMessage()
+	m.SetAddressHeader("From", worker.EmailAddress, "Autogen PLN")
+	m.SetHeader("To", activationMail.Email)
+	m.SetHeader("Subject", "[NO REPLY] Akun Anda Telah Diaktivasi")
+	m.SetBody("text/html", body.String())
+
+	d := gomail.NewDialer(worker.DialHost, worker.DialPort, worker.DialUser, worker.DialPassword)
+
+	if err = d.DialAndSend(m); err != nil {
+		worker.Log.Error("MailWorker.Activation(): failed to send email", "to", activationMail.Email, "error", err)
+		return err
+	}
+	worker.Log.Info("MailWorker.Activation(): email sent successfully", "to", activationMail.Email)
 	return nil
 }

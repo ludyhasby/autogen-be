@@ -55,3 +55,8 @@ type FindResetPasswordTokenResp struct {
 type ResetPasswordResp struct {
 	Token string `json:"token"`
 }
+type UserActivationMail struct {
+	Email string
+	Name  string
+	URL   string
+}

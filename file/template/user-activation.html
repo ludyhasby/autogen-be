@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="id">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aktivasi Akun Berhasil - Autogen PLN</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            background-color: #F8FAFC;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            color: #191c1e;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        a {
+            color: #014251;
+            text-decoration: none;
+        }
+
+        .btn-amr {
+            background-color: #014251 !important;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-amr:hover {
+            background-color: #002d38 !important;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+            }
+
+            .content {
+                padding: 24px 20px !important;
+            }
+
+            .header-logo-cell {
+                padding: 20px 20px 16px 20px !important;
+            }
+
+            .footer-cell {
+                padding: 20px 20px !important;
+            }
+
+            .btn {
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                text-align: center !important;
+            }
+        }
+    </style>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #F8FAFC;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8FAFC; padding: 36px 12px;">
+    <tr>
+        <td align="center">
+            <!-- Main Bento-Style Card (analisis-amr.css) -->
+            <table border="0" cellpadding="0" cellspacing="0" width="560" class="container"
+                   style="max-width: 560px; width: 100%; background-color: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); overflow: hidden;">
+
+                <!-- Logo Header -->
+                <tr>
+                    <td class="header-logo-cell" align="left"
+                        style="padding: 26px 36px 20px 36px; border-bottom: 1px solid #E2E8F0; background-color: #ffffff;">
+                        <img src="https://github.com/user-attachments/assets/15349020-096c-4c47-8022-749a6b0593c1"
+                             alt="Autogen PLN Logo" height="50"
+                             style="display: block; border: 0; outline: none; text-decoration: none; height: 50px; width: auto;" />
+                    </td>
+                </tr>
+
+                <!-- Body Content -->
+                <tr>
+                    <td class="content" style="padding: 32px 36px; font-size: 14px; line-height: 1.6; color: #3f484c;">
+                        <p style="margin: 0 0 16px 0; color: #191c1e;">
+                            Yth. Bapak/Ibu <strong>{{ .Name }}</strong>,
+                        </p>
+
+                        <p style="margin: 0 0 14px 0; color: #3f484c;">
+                            Kami informasikan bahwa akun Anda pada aplikasi <strong>Autogen PLN</strong> telah berhasil diaktivasi.
+                        </p>
+
+                        <p style="margin: 0 0 14px 0; color: #3f484c;">
+                            Anda sekarang dapat menggunakan akun tersebut untuk masuk dan mengakses seluruh layanan Autogen PLN.
+                        </p>
+
+                        <p style="margin: 0 0 24px 0; color: #3f484c;">
+                            Silakan masuk melalui aplikasi menggunakan kredensial yang telah Anda daftarkan:
+                        </p>
+
+                        <!-- Login CTA Button (.btn-export-solid style: #014251) -->
+                        <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 0 28px 0;">
+                            <tr>
+                                <td align="center" style="border-radius: 8px; background-color: #014251;">
+                                    <a href="{{ .URL }}" target="_blank" class="btn btn-amr"
+                                       style="display: inline-block; padding: 12px 28px; font-size: 13.5px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: #014251; letter-spacing: 0.02em;">
+                                        MASUK KE APLIKASI
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Informasi Keamanan (Sub-Card) -->
+                        <div
+                                style="background-color: #f8fafc; border: 1px solid #E2E8F0; border-radius: 8px; padding: 18px 20px; margin-bottom: 24px;">
+                            <p
+                                    style="margin: 0 0 10px 0; font-weight: 700; color: #191c1e; font-size: 13px; letter-spacing: 0.02em;">
+                                Informasi Keamanan
+                            </p>
+                            <ul style="margin: 0; padding-left: 18px; color: #3f484c; font-size: 13px; line-height: 1.6;">
+                                <li style="margin-bottom: 4px;">Jangan membagikan username, password, atau informasi keamanan akun kepada pihak lain.</li>
+                                <li style="margin-bottom: 4px;">Tim Autogen PLN tidak pernah meminta password Anda melalui email.</li>
+                                <li>Jika Anda tidak merasa melakukan pendaftaran atau aktivasi akun ini, segera hubungi administrator/support.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Closing -->
+                        <p style="margin: 0 0 4px 0; color: #3f484c;">
+                            Hormat kami,
+                        </p>
+                        <p style="margin: 0; font-weight: 600; color: #191c1e;">
+                            <span style="font-weight: 600; color: #191c1e;">Tim Autogen P2TL PLN</span>
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Footer (.table-pagination-footer style: #f7f9fb) -->
+                <tr>
+                    <td class="footer-cell"
+                        style="padding: 20px 36px; background-color: #f7f9fb; border-top: 1px solid #E2E8F0; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #718096; line-height: 1.5;">
+                            Email ini dikirim secara otomatis. Mohon tidak membalas email ini.
+                        </p>
+                        <p style="margin: 0; font-size: 11.5px; color: #718096; line-height: 1.5;">
+                            Jika Anda mengalami kendala, silakan hubungi tim administrator Autogen PLN di <a
+                                href="mailto:autogen.pln@gmail.com"
+                                style="color: #014251; font-weight: 600; text-decoration: none;">autogen.pln@gmail.com</a>.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+
+</html>
