@@ -28,7 +28,7 @@ func NewAMRDetailResultRepository(
 	}
 }
 
-func (r *AMRDetailResultRepository) Report(tx *gorm.DB, amrID uint64, param core.QueryInfo) (results []entity.Report, totalItems int32, totalPages int32, pageSize int32, err error) {
+func (r *AMRDetailResultRepository) Report(tx *gorm.DB, amrID uint64, minWeightedValue float64, param core.QueryInfo) (results []entity.Report, totalItems int32, totalPages int32, pageSize int32, err error) {
 	ctx := tx.Statement.Context
 
 	// init tracer
@@ -51,6 +51,11 @@ func (r *AMRDetailResultRepository) Report(tx *gorm.DB, amrID uint64, param core
 			FieldName: "amr_id",
 			Operator:  dancok.IsEqual,
 			Value:     fmt.Sprintf("%d", amrID),
+		},
+		dancok.FilterDescriptor{
+			FieldName: "total_weighted_value",
+			Operator:  dancok.IsMoreThanOrEqual,
+			Value:     fmt.Sprintf("%f", minWeightedValue),
 		},
 	)
 

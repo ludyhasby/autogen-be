@@ -33,7 +33,7 @@ func main() {
 	amrRepo := repository.NewAMRRepository(logConfig)
 
 	// Worker UseCase
-	newsFetchWorker := worker.NewNewsWorker(dbConfig, logConfig, newsRepo, envConfig.NewsAPI, envConfig.NewsCronExpr)
+	newsFetchWorker := worker.NewNewsWorker(dbConfig, logConfig, loc, newsRepo, envConfig.NewsAPI, envConfig.NewsCronExpr)
 	amrWorker := worker.NewAMRWorker(dbConfig, logConfig, amrRepo, envConfig.Location, envConfig.NumberBatchAMRDelete, envConfig.AMRCronExpr)
 
 	// Worker

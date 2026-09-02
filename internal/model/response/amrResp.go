@@ -74,6 +74,7 @@ type FindAMRResp struct {
 	StageProcess  coreenum.CTXEnumStageProcess `json:"stage_process"`
 	CreatedAt     string                       `json:"created_at"`
 	AutoDeletedAt string                       `json:"auto_deleted_at"`
+	FailedReason  string                       `json:"failed_reason"`
 }
 type FindAMRParamConfigResp struct {
 	AMRConfigID             uint64  `json:"amr_config_id"`

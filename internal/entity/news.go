@@ -40,27 +40,27 @@ func (t NewsEntity) ConvertToList(entities []NewsEntity) (resp []modelresponse.L
 	return
 }
 
-func (t NewsEntity) ConvertToEntity(respFetch modelresponse.NewsFetchResponse, entitiesExisting []NewsEntity) (entities []*NewsEntity) {
+func (t NewsEntity) ConvertToEntity(respFetch modelresponse.NewsFetchResponse, entitiesExisting []NewsEntity, loc *time.Location) (entities []*NewsEntity) {
 	existingTitles := make(map[string]struct{}, len(entitiesExisting))
 	for _, existing := range entitiesExisting {
 		existingTitles[existing.Title] = struct{}{}
 	}
 
-	for _, article := range respFetch.Articles {
-		publishedAt, err := time.Parse(time.RFC3339, article.PublishedAt)
+	for _, article := range respFetch.Data {
+		publishedAt, err := time.ParseInLocation("2006/01/02 15:04:05", article.NewsDate, loc)
 		if err != nil {
 			publishedAt = time.Now()
 		}
-		
+
 		if _, exists := existingTitles[article.Title]; exists {
 			continue
 		}
 		entities = append(entities, &NewsEntity{
-			Source:      article.Source.Name,
+			Source:      "CNN Indonesia",
 			Title:       article.Title,
 			Description: article.Description,
 			Url:         article.URL,
-			UrlToImage:  article.URLToImage,
+			UrlToImage:  "https://akcdn.detik.net.id/visual/" + article.Image[0].RawUrlImage + article.Image[0].Extension,
 			PublishedAt: publishedAt,
 		})
 	}

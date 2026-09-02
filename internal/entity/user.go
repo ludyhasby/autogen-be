@@ -30,8 +30,8 @@ func (t UserEntity) TableName() string {
 	return "users"
 }
 
-func (t UserEntity) CheckFound() bool {
-	return t.UserID > 0
+func (t *UserEntity) CheckFound() bool {
+	return t != nil && t.UserID > 0
 }
 
 func (t UserEntity) Create(req *modelrequest.RegisterUserReq, role coreenum.CTXEnumRole) *UserEntity {

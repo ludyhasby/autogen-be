@@ -21,15 +21,17 @@ import (
 type NewsWorker struct {
 	DB             *gorm.DB
 	Log            *slog.Logger
+	Location       *time.Location
 	NewsRepository *repository.NewsRepository
 	NewsAPI        string
 	CronExpr       string
 }
 
-func NewNewsWorker(db *gorm.DB, log *slog.Logger, newsRepository *repository.NewsRepository, newsAPI, cronExpr string) *NewsWorker {
+func NewNewsWorker(db *gorm.DB, log *slog.Logger, location *time.Location, newsRepository *repository.NewsRepository, newsAPI, cronExpr string) *NewsWorker {
 	return &NewsWorker{
 		DB:             db,
 		Log:            log,
+		Location:       location,
 		NewsRepository: newsRepository,
 		NewsAPI:        newsAPI,
 		CronExpr:       cronExpr,
@@ -63,11 +65,13 @@ func (worker *NewsWorker) FetchNewNews(ctx context.Context) {
 		spanCtx, span := tr.Start(ctx, "FetchNewNews()")
 		defer span.End()
 
-		req, errReq := http.NewRequestWithContext(spanCtx, http.MethodGet, "https://newsapi.org/v2/everything?q=pln&language=id&searchIn=title&pageSize=20&apiKey="+worker.NewsAPI, nil)
+		req, errReq := http.NewRequestWithContext(spanCtx, http.MethodGet, "https://www.cnnindonesia.com/api/v3/search?query=pln&idtype=1&start=0&limit=20", nil)
 		if errReq != nil {
 			worker.Log.Error("NewsWorker.FetchNewNews()", "http.NewRequestWithContext()", "error", errReq.Error())
 			return
 		}
+		req.Header.Set("User-Agent", "Mozilla/5.0")
+		req.Header.Set("Accept", "application/json")
 
 		resp, err := client.Do(req)
 		if err != nil {
@@ -84,7 +88,7 @@ func (worker *NewsWorker) FetchNewNews(ctx context.Context) {
 			worker.Log.Error("NewsWorker.FetchNewNews()", "json.NewDecoder().Decode()", "error", err.Error())
 			return
 		}
-		nNew := len(news.Articles)
+		nNew := len(news.Data)
 
 		tx := worker.DB.WithContext(spanCtx)
 
@@ -119,7 +123,7 @@ func (worker *NewsWorker) FetchNewNews(ctx context.Context) {
 			}
 		}
 
-		entityNewNews := (&entity.NewsEntity{}).ConvertToEntity(news, entityNewsList[:len(entityNewsList)-nDeleted])
+		entityNewNews := (&entity.NewsEntity{}).ConvertToEntity(news, entityNewsList[:len(entityNewsList)-nDeleted], worker.Location)
 
 		if len(entityNewNews) > 0 {
 			if txErr = worker.NewsRepository.CreateBatch(tx, entityNewNews); txErr != nil {
