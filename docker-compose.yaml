@@ -25,7 +25,7 @@ services:
         max-size: "10m"
         max-file: "3"
   web:
-    image: ludyhasby/autogen-be-worker:1.1.0
+    image: ludyhasby/autogen-be-worker:1.1.2
     entrypoint: ["sh", "-c", "/app/web"]
     container_name: autogen-be-web
     restart: always
@@ -49,7 +49,7 @@ services:
         max-size: "10m"
         max-file: "3"
   worker:
-    image: ludyhasby/autogen-be-worker:1.1.0
+    image: ludyhasby/autogen-be-worker:1.1.2
     entrypoint: ["/app/worker"]
     container_name: autogen-be-worker
     restart: always
