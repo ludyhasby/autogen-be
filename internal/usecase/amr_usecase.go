@@ -448,7 +448,17 @@ func (u *AMRUseCase) parseRow(row []string, rowNumber int64, mapIndex map[string
 	}
 	readDateTime, parseErr := helperconverter.ConvertStringToTime(readDate)
 	if parseErr != nil {
-		err = helperprocess.AddUnsupportFieldErr(rowNumber, "READ_DATE", "Berformat \"1/2/2006 15:04\"")
+		err = helperprocess.AddUnsupportFieldErr(
+			rowNumber,
+			"READ_DATE",
+			"Format READ_DATE tidak valid. Format yang didukung, diantaranya "+
+				"\"1/2/2006 3:04:05 PM\", "+
+				"\"1/2/2006 3:04 PM\", "+
+				"\"1/2/2006 15:04:05\", "+
+				"\"1/2/2006 15:04\", "+
+				"\"2006-01-02 15:04:05\", dan "+
+				"\"2006-01-02 15:04\".",
+		)
 		return
 	}
 
