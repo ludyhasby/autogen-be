@@ -8,12 +8,13 @@ import (
 )
 
 type Env struct {
-	AppName     string
-	PreFork     bool
-	LogLevel    string
-	WebPort     int
-	Location    *time.Location
-	FrontEndURL string
+	AppName        string
+	PreFork        bool
+	LogLevel       string
+	WebPort        int
+	Location       *time.Location
+	FrontEndURL    string
+	AllowedOrigins string
 
 	DBMigrate  bool
 	DBUser     string
@@ -58,12 +59,13 @@ func NewEnv(viper *viper.Viper) *Env {
 		loc = l
 	}
 	return &Env{
-		AppName:     viper.GetString("APP_NAME"),
-		PreFork:     viper.GetBool("PRE_FORK"),
-		LogLevel:    viper.GetString("LOG_LEVEL"),
-		WebPort:     viper.GetInt("WEB_PORT"),
-		Location:    loc,
-		FrontEndURL: viper.GetString("FRONT_END_URL"),
+		AppName:        viper.GetString("APP_NAME"),
+		PreFork:        viper.GetBool("PRE_FORK"),
+		LogLevel:       viper.GetString("LOG_LEVEL"),
+		WebPort:        viper.GetInt("WEB_PORT"),
+		Location:       loc,
+		FrontEndURL:    viper.GetString("FRONT_END_URL"),
+		AllowedOrigins: viper.GetString("ALLOWED_ORIGINS"),
 
 		DBMigrate:  viper.GetBool("DB_MIGRATE"),
 		DBUser:     viper.GetString("DB_USER"),

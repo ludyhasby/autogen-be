@@ -17,7 +17,7 @@ func NewFiber(env *Env) *fiber.App {
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: env.AllowedOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
