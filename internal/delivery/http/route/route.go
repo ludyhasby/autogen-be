@@ -12,11 +12,12 @@ import (
 )
 
 type RouteConfig struct {
-	App         *fiber.App
-	SecretKey   string
-	AuthHandler *handler.AuthHandler
-	AMRHandler  *handler.AMRHandler
-	NewsHandler *handler.NewsHandler
+	App             *fiber.App
+	SecretKey       string
+	AuthHandler     *handler.AuthHandler
+	AMRHandler      *handler.AMRHandler
+	NewsHandler     *handler.NewsHandler
+	PrabayarHandler *handler.PrabayarHandler
 }
 
 func (c *RouteConfig) Setup() {
@@ -80,6 +81,10 @@ func (c *RouteConfig) SetupUserRoute() {
 	amrRoute.Get("/:amr_id/weight-config", c.AMRHandler.FindWeightConfig)
 	amrRoute.Get("/:amr_id/export", c.AMRHandler.Export)
 	amrRoute.Get("/:amr_id/export-recommendation", c.AMRHandler.ExportRecommendation)
+
+	// Prabayar
+	prabayarRoute := userRoute.Group("/prabayar")
+	prabayarRoute.Post("/", c.PrabayarHandler.Upload)
 }
 
 func (c *RouteConfig) SetupAdminRoute() {

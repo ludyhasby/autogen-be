@@ -43,6 +43,8 @@ func Bootstrap(config *BootstrapConfig) {
 	amrDetailResultRepo := repository.NewAMRDetailResultRepository(config.Log)
 	newsRepo := repository.NewNewsRepository(config.Log)
 	passwordResetToken := repository.NewPasswordResetTokenRepository(config.Log)
+	prabayarRepo := repository.NewPrabayarRepository(config.Log)
+	prabayarDetailRepo := repository.NewPrabayarDetailRepository(config.Log, sqlDB)
 
 	// setup worker
 	mailWorker := worker.NewMailWorker(config.DB, config.Log, config.Env.Location, config.Env.EmailAddress, config.Env.DialHost, config.Env.DialPassword, config.Env.DialUser, config.Env.DialPort)
@@ -51,18 +53,21 @@ func Bootstrap(config *BootstrapConfig) {
 	authUseCase := usecase.NewAuthUseCase(config.DB, config.Log, config.Validate, config.Env.SecretKey, config.Env.Location, config.Env.FrontEndURL, mailWorker, userRepo, passwordResetToken)
 	amrUseCase := usecase.NewAMRUseCase(config.DB, config.Log, config.Validate, aesGcm, config.Env.Location, config.Env.NumberBatch, config.Env.DeletedDurationInHour, amrRepo, amrDetailRepo, amrConfigRepo, amrWeightRepo, amrDetailResultRepo, config.Env.MaxConcurrentUploads, config.Env.UploadTempDir)
 	newsUseCase := usecase.NewNewsUseCase(config.DB, config.Log, config.Validate, newsRepo)
+	prabayarUseCase := usecase.NewPrabayarUseCase(config.DB, config.Log, config.Validate, aesGcm, config.Env.Location, prabayarRepo, prabayarDetailRepo, config.Env.MaxConcurrentUploads, config.Env.DeletedDurationInHour, config.Env.NumberBatch)
 
 	// setup controller
 	authHandler := handler.NewAuthHandler(config.Log, authUseCase)
 	amrHandler := handler.NewAMRHandler(config.Log, amrUseCase)
 	newsHandler := handler.NewNewsHandler(config.Log, newsUseCase)
+	prabayarHandler := handler.NewPrabayarHandler(config.Log, prabayarUseCase)
 
 	routeConfig := internaldeliveryhttproute.RouteConfig{
-		App:         config.App,
-		SecretKey:   config.Env.SecretKey,
-		AuthHandler: authHandler,
-		AMRHandler:  amrHandler,
-		NewsHandler: newsHandler,
+		App:             config.App,
+		SecretKey:       config.Env.SecretKey,
+		AuthHandler:     authHandler,
+		AMRHandler:      amrHandler,
+		NewsHandler:     newsHandler,
+		PrabayarHandler: prabayarHandler,
 	}
 
 	routeConfig.Setup()

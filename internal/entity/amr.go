@@ -28,7 +28,7 @@ func (t AMREntity) TableName() string {
 	return "amr"
 }
 
-func (t AMREntity) CheckFound() bool {
+func (t *AMREntity) CheckFound() bool {
 	return t.AMRID > 0
 }
 

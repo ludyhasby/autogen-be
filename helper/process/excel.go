@@ -13,7 +13,7 @@ var (
 	ErrExceedMaxData       error = fmt.Errorf("jumlah baris melebihi batas maksimum")
 )
 
-func ExtractAndValidateHeader(xlsx *excelize.File, headerExpectation []string) (rows *excelize.Rows, mapIndex map[string]int, err error) {
+func ExtractAndValidateHeader(xlsx *excelize.File, headerExpectation []string, skipRows int) (rows *excelize.Rows, mapIndex map[string]int, err error) {
 	sheets := xlsx.GetSheetList()
 	if len(sheets) == 0 {
 		err = ErrUnsupportedTemplate
@@ -24,7 +24,18 @@ func ExtractAndValidateHeader(xlsx *excelize.File, headerExpectation []string) (
 	if err != nil {
 		return
 	}
-	rows.Next()
+
+	for i := 0; i < skipRows; i++ {
+		if !rows.Next() {
+			err = ErrUnsupportedTemplate
+			return
+		}
+	}
+	if !rows.Next() {
+		err = ErrUnsupportedTemplate
+		return
+	}
+	
 	headerRow, err := rows.Columns()
 	if err != nil {
 		return

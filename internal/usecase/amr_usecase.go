@@ -579,7 +579,7 @@ func (u *AMRUseCase) processUploadJob(job worker.UploadJob) {
 	}
 	defer xlsx.Close()
 
-	rows, mapIndex, err := helperprocess.ExtractAndValidateHeader(xlsx, headerExpect)
+	rows, mapIndex, err := helperprocess.ExtractAndValidateHeader(xlsx, headerExpect, 0)
 	if err != nil {
 		log.Warn("AMRUseCase.processUploadJob()", "excelize.ExtractAndValidateHeader()", "error", err.Error())
 		u.markAMRFailed(readTx, entityAMR, "format header tidak valid "+err.Error())

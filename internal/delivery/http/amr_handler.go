@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-const maxUploadSizeBytes = 200 << 20
+const amrMaxUploadSizeBytes = 200 << 20
 
 type AMRHandler struct {
 	Log     *slog.Logger
@@ -67,7 +67,7 @@ func (handler *AMRHandler) Upload(fiberCtx *fiber.Ctx) error {
 		})
 	}
 
-	if fileHeader.Size > maxUploadSizeBytes {
+	if fileHeader.Size > amrMaxUploadSizeBytes {
 		handler.Log.Warn("AMRHandler.Upload()", "file size exceeded", "warn", fileHeader.Size)
 		return fiberCtx.Status(fiber.StatusRequestEntityTooLarge).JSON(coreresponse.ApiResponse[modelresponse.UploadAMRResp]{
 			Tin:     timeIn,
